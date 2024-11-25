@@ -3,11 +3,14 @@ name = "bench-plonky3"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+doctest = false
+
 [dependencies]
 bench = { path = "../bench" }
-bincode = { workspace = true }
-criterion = { workspace = true }
-rand = { workspace = true }
+bincode = "1.3"
+criterion = "0.5.1"
+rand = "0.8.5"
 
 p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
 p3-baby-bear = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
