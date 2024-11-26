@@ -81,18 +81,18 @@ mod test {
     #[test]
     fn keccak_proof_size() {
         type H = Plonky3<BabyBearKeccakMtConfig, KeccakCircuit>;
-        assert_proof_size::<H>([(1 << 10, 1_671_012)]);
+        assert_proof_size::<H>([(1 << 10, 4_145_172)]);
     }
 
     #[test]
     fn blake3_proof_size() {
         type H = Plonky3<BabyBearKeccakMtConfig, Blake3Circuit>;
-        assert_proof_size::<H>([(1 << 10, 4_241_972)]);
+        assert_proof_size::<H>([(1 << 10, 10_400_852)]);
     }
 
     #[test]
     fn koala_bear_poseidon2_proof_size() {
         type H = Plonky3<KoalaBearKeccakMtConfig, KoalaBearPoseidon2Circuit>;
-        assert_proof_size::<H>([(1 << 20, 1_227_060), (1 << 21, 1_293_492)]);
+        assert_proof_size::<H>([(1 << 20, 3_074_100), (1 << 21, 3_244_116)]);
     }
 }

@@ -40,7 +40,7 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
         let dft = Dft::default();
         // TODO: Calculate precise minimum #queries to reach 128-bits provable security.
         let log_blowup = 1;
-        let num_queries = 100;
+        let num_queries = 256;
         let fri_config = FriConfig {
             log_blowup,
             num_queries,
