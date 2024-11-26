@@ -43,7 +43,6 @@ pub fn bench<H: HashInSnark>(
     for num_permutations in num_permutations {
         let prover = H::new(num_permutations);
         let id = BenchmarkId::new(name.as_ref(), prover.num_permutations());
-        group.sample_size(10);
         group.throughput(Throughput::Elements(prover.num_permutations() as _));
         group.bench_function(id, |b| {
             b.iter_batched(

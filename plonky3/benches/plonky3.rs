@@ -32,9 +32,8 @@ fn bench_koala_bear_poseidon2(c: &mut Criterion) {
 }
 
 criterion_group!(
-    benches,
-    bench_keccak,
-    bench_blake3,
-    bench_koala_bear_poseidon2,
+    name = benches;
+    config = Criterion::default().sample_size(10);
+    targets = bench_keccak, bench_blake3, bench_koala_bear_poseidon2,
 );
 criterion_main!(benches);

@@ -1,0 +1,16 @@
+[package]
+name = "bench-stwo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bench = { path = "../bench" }
+bincode = "1.3"
+criterion = "0.5.1"
+rand = "0.8.5"
+
+stwo-prover = { git = "https://github.com/han0110/stwo", branch = "bench", features = ["parallel"] }
+
+[[bench]]
+name = "stwo"
+harness = false
