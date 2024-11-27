@@ -99,11 +99,11 @@ macro_rules! main {
         #[derive(Clone, Debug, clap::Parser)]
         #[command(version, about)]
         struct Args {
-            #[arg(short, long, value_enum)]
+            #[arg(long, value_enum)]
             hash: Hash,
-            #[arg(short, long)]
+            #[arg(long)]
             log_permutations: usize,
-            #[arg(short, long)]
+            #[arg(long)]
             sample_size: Option<usize>,
         }
 

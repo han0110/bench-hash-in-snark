@@ -17,7 +17,7 @@ LOG_PERMUTATIONS=$3
 
 export RAYON_NUM_THREADS=${RAYON_NUM_THREADS:=4}
 RUN="cargo --quiet run --release -- --hash $HASH --log-permutations $LOG_PERMUTATIONS"
-OUTPUT="report/${HASH}_lp${LOG_PERMUTATIONS}_t$RAYON_NUM_THREADS"
+OUTPUT="report/t${RAYON_NUM_THREADS}_${HASH}_lp${LOG_PERMUTATIONS}"
 
 cd $PACKAGE
 mkdir -p report
