@@ -6,6 +6,7 @@ use p3_poseidon2_air::{generate_vectorized_trace_rows, RoundConstants, Vectorize
 use p3_uni_stark::{Domain, StarkGenericConfig, Val};
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 
+// Copied from https://github.com/Plonky3/Plonky3/blob/abdc2a0/poseidon2-air/examples/prove_poseidon2_koala_bear_keccak.rs#L26-L34.
 const WIDTH: usize = 16;
 const SBOX_DEGREE: u64 = 3;
 const SBOX_REGISTERS: usize = 0;

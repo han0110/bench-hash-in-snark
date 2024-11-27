@@ -1,3 +1,5 @@
+// Copied and modified from https://github.com/IrreducibleOSS/binius/blob/main/examples/keccakf_circuit.rs.
+
 use bench::HashInSnark;
 use binius_circuits::{builder::ConstraintSystemBuilder, unconstrained::unconstrained};
 use binius_core::{
