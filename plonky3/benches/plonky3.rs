@@ -1,4 +1,4 @@
-use bench::bench;
+use bench::criterion::bench;
 use bench_plonky3::{
     circuit::{Blake3Circuit, KeccakCircuit, KoalaBearPoseidon2Circuit},
     config::{BabyBearKeccakMtConfig, KoalaBearKeccakMtConfig},

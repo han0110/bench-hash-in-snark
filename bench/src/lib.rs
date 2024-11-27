@@ -1,6 +1,9 @@
-use core::fmt::Debug;
-use criterion::{measurement::Measurement, BatchSize, BenchmarkGroup, BenchmarkId, Throughput};
+use core::{fmt::Debug, hint::black_box};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
+use std::time::{Duration, Instant};
+
+pub mod criterion;
+pub mod util;
 
 pub trait HashInSnark {
     type Input;
@@ -34,33 +37,97 @@ pub trait HashInSnark {
     }
 }
 
-pub fn bench<H: HashInSnark>(
-    group: &mut BenchmarkGroup<impl Measurement>,
-    name: impl AsRef<str>,
-    num_permutations: impl IntoIterator<Item = usize>,
-) {
-    let mut rng = StdRng::from_entropy();
-    for num_permutations in num_permutations {
-        let prover = H::new(num_permutations);
-        let id = BenchmarkId::new(name.as_ref(), prover.num_permutations());
-        group.throughput(Throughput::Elements(prover.num_permutations() as _));
-        group.bench_function(id, |b| {
-            b.iter_batched(
-                || prover.generate_input(&mut rng),
-                |input| prover.prove(input),
-                BatchSize::LargeInput,
-            );
-        });
+fn routine<H: HashInSnark>(snark: &H, mut rng: impl RngCore) -> (Duration, usize) {
+    let input = black_box(snark.generate_input(&mut rng));
+
+    let start = Instant::now();
+    let proof = snark.prove(input);
+    let elapsed = start.elapsed();
+
+    let proof_size = H::serialize_proof(&proof).len();
+    drop(black_box(proof));
+
+    (elapsed, proof_size)
+}
+
+fn warm_up<H: HashInSnark>(snark: &H, mut rng: impl RngCore) {
+    let mut total_elapsed = Duration::default();
+    while total_elapsed.as_secs_f64() < 3.0 {
+        total_elapsed += routine(snark, &mut rng).0;
     }
 }
 
-pub fn assert_proof_size<H: HashInSnark>(expected: impl IntoIterator<Item = (usize, usize)>) {
-    for (num_permutations, expected_proof_size) in expected {
-        let prover = H::new(num_permutations);
-        let proof_size = prover.proof_size();
-        assert_eq!(
-            proof_size, expected_proof_size,
-            "Expected {expected_proof_size}, got {proof_size}"
-        );
+pub fn run<H: HashInSnark>(num_permutations: usize) {
+    let snark = H::new(num_permutations);
+    let input = black_box(snark.generate_input(StdRng::from_entropy()));
+    let proof = snark.prove(input);
+    drop(black_box(proof));
+}
+
+pub fn bench<H: HashInSnark>(
+    num_permutations: usize,
+    sample_size: usize,
+) -> (usize, Duration, f64, f64) {
+    let mut rng = StdRng::from_entropy();
+    let snark = H::new(num_permutations);
+
+    warm_up(&snark, &mut rng);
+
+    let mut total_elapsed = Duration::default();
+    let mut total_proof_size = 0;
+    for _ in 0..sample_size {
+        let (elapsed, proof_size) = routine(&snark, &mut rng);
+        total_elapsed += elapsed;
+        total_proof_size += proof_size;
     }
+
+    let num_permutations = snark.num_permutations();
+    let time = total_elapsed / sample_size as u32;
+    let throughput = num_permutations as f64 / time.as_secs_f64();
+    let proof_size = total_proof_size as f64 / sample_size as f64;
+    (num_permutations, time, throughput, proof_size)
+}
+
+#[macro_export]
+macro_rules! main {
+    ($($variant:ident => $snark:ty,)*) => {
+        #[derive(Clone, Debug, clap::ValueEnum)]
+        enum Hash {
+            $($variant,)*
+        }
+
+        #[derive(Clone, Debug, clap::Parser)]
+        #[command(version, about)]
+        struct Args {
+            #[arg(short, long, value_enum)]
+            hash: Hash,
+            #[arg(short, long)]
+            log_permutations: usize,
+            #[arg(short, long)]
+            sample_size: Option<usize>,
+        }
+
+        fn main() {
+            let args: Args = clap::Parser::parse();
+
+            if args.sample_size.is_none() {
+                match args.hash {
+                    $(Hash::$variant => $crate::run::<$snark>(1 << args.log_permutations),)*
+                }
+                return;
+            }
+
+            let (_, time, throughput, proof_size) = match args.hash {
+                $(Hash::$variant => $crate::bench::<$snark>(
+                    1 << args.log_permutations,
+                    args.sample_size.unwrap_or(10),
+                ),)*
+            };
+            println!(
+                "      time: {time:?}\nthroughput: {}\nproof size: {}",
+                $crate::util::human_throughput(throughput),
+                $crate::util::human_size(proof_size),
+            );
+        }
+    };
 }

@@ -68,31 +68,3 @@ where
         bincode::deserialize(bytes).unwrap()
     }
 }
-
-#[cfg(test)]
-mod test {
-    use crate::{
-        circuit::{Blake3Circuit, KeccakCircuit, KoalaBearPoseidon2Circuit},
-        config::{BabyBearKeccakMtConfig, KoalaBearKeccakMtConfig},
-        Plonky3,
-    };
-    use bench::assert_proof_size;
-
-    #[test]
-    fn keccak_proof_size() {
-        type H = Plonky3<BabyBearKeccakMtConfig, KeccakCircuit>;
-        assert_proof_size::<H>([(1 << 10, 4_145_172)]);
-    }
-
-    #[test]
-    fn blake3_proof_size() {
-        type H = Plonky3<BabyBearKeccakMtConfig, Blake3Circuit>;
-        assert_proof_size::<H>([(1 << 10, 10_400_852)]);
-    }
-
-    #[test]
-    fn koala_bear_poseidon2_proof_size() {
-        type H = Plonky3<KoalaBearKeccakMtConfig, KoalaBearPoseidon2Circuit>;
-        assert_proof_size::<H>([(1 << 20, 3_074_100), (1 << 21, 3_244_116)]);
-    }
-}

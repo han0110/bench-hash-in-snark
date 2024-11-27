@@ -9,6 +9,7 @@ doctest = false
 [dependencies]
 bench = { path = "../bench" }
 bincode = "1.3"
+clap = { version = "4.5.21", features = ["derive"] }
 criterion = "0.5.1"
 rand = "0.8.5"
 

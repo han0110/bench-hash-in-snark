@@ -1,4 +1,4 @@
-use bench::bench;
+use bench::criterion::bench;
 use bench_stwo::circuit::{StwoBlake2s, StwoPoseidon2};
 use criterion::{criterion_group, criterion_main, Criterion};
 
