@@ -1,5 +1,5 @@
 use bench::criterion::bench;
-use bench_stwo::circuit::{StwoBlake2s, StwoPoseidon2};
+use bench_stwo::hash::{StwoBlake2s, StwoPoseidon2};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 fn num_perms(logs: impl IntoIterator<Item = usize>) -> impl Iterator<Item = usize> {

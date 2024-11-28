@@ -1,5 +1,5 @@
 use bench::main;
-use bench_binius::circuit::{BiniusGroestl, BiniusKeccak};
+use bench_binius::hash::{BiniusGroestl, BiniusKeccak};
 
 main!(
     Groestl => BiniusGroestl,

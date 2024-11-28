@@ -1,5 +1,5 @@
 use bench::criterion::bench;
-use bench_binius::circuit::{BiniusGroestl, BiniusKeccak};
+use bench_binius::hash::{BiniusGroestl, BiniusKeccak};
 use criterion::{criterion_group, criterion_main, Criterion};
 
 fn num_perms(logs: impl IntoIterator<Item = usize>) -> impl Iterator<Item = usize> {
