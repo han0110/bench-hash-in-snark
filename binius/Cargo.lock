@@ -136,7 +136,7 @@ dependencies = [
 [[package]]
 name = "binius_circuits"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "anyhow",
  "binius_core",
@@ -156,7 +156,7 @@ dependencies = [
 [[package]]
 name = "binius_core"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "assert_matches",
  "auto_impl",
@@ -173,8 +173,6 @@ dependencies = [
  "either",
  "getset",
  "itertools 0.13.0",
- "p3-challenger",
- "p3-matrix",
  "p3-symmetric",
  "p3-util",
  "rand",
@@ -190,7 +188,7 @@ dependencies = [
 [[package]]
 name = "binius_field"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "binius_utils",
  "bytemuck",
@@ -210,7 +208,7 @@ dependencies = [
 [[package]]
 name = "binius_hal"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "auto_impl",
  "binius_field",
@@ -229,7 +227,7 @@ dependencies = [
 [[package]]
 name = "binius_hash"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "binius_field",
  "binius_ntt",
@@ -244,7 +242,7 @@ dependencies = [
 [[package]]
 name = "binius_macros"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -254,7 +252,7 @@ dependencies = [
 [[package]]
 name = "binius_math"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "auto_impl",
  "binius_field",
@@ -273,7 +271,7 @@ dependencies = [
 [[package]]
 name = "binius_ntt"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "binius_field",
  "binius_math",
@@ -287,7 +285,7 @@ dependencies = [
 [[package]]
 name = "binius_utils"
 version = "0.1.0"
-source = "git+https://github.com/IrreducibleOSS/binius#913ed4b44d4e50f60edceb0383a07712655e6464"
+source = "git+https://github.com/IrreducibleOSS/binius?rev=9791abc#9791abc4f7214a6c94d2af766f676dbb0697896c"
 dependencies = [
  "bytemuck",
  "bytes",
@@ -770,18 +768,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
-name = "p3-challenger"
-version = "0.1.0"
-source = "git+https://github.com/Plonky3/Plonky3?rev=72936761#72936761d42846bd455235de09d58055eaa78c34"
-dependencies = [
- "p3-field",
- "p3-maybe-rayon",
- "p3-symmetric",
- "p3-util",
- "tracing",
-]
-
-[[package]]
 name = "p3-field"
 version = "0.1.0"
 source = "git+https://github.com/Plonky3/Plonky3?rev=72936761#72936761d42846bd455235de09d58055eaa78c34"
@@ -796,21 +782,6 @@ dependencies = [
  "rand",
  "serde",
  "tracing",
-]
-
-[[package]]
-name = "p3-matrix"
-version = "0.1.0"
-source = "git+https://github.com/Plonky3/Plonky3?rev=72936761#72936761d42846bd455235de09d58055eaa78c34"
-dependencies = [
- "itertools 0.13.0",
- "p3-field",
- "p3-maybe-rayon",
- "p3-util",
- "rand",
- "serde",
- "tracing",
- "transpose",
 ]
 
 [[package]]

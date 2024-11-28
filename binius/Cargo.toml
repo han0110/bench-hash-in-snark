@@ -10,19 +10,19 @@ clap = { version = "4.5.21", features = ["derive"] }
 criterion = "0.5.1"
 rand = "0.8.5"
 
-binius_circuits = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_core = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_field = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_hal = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_hash = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_macros = { git = "https://github.com/IrreducibleOSS/binius" }
-binius_math = { git = "https://github.com/IrreducibleOSS/binius" }
+binius_circuits = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_core = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_field = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_hal = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_hash = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_macros = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_math = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
 bumpalo = { version = "3.16.0", features = ["collections"] }
 groestl_crypto = { package = "groestl", version = "0.10.1" }
+
+[profile.release]
+lto = "fat"
 
 [[bench]]
 name = "binius"
 harness = false
-
-[profile.release]
-lto = "fat"

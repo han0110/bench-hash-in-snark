@@ -12,6 +12,9 @@ rand = "0.8.5"
 
 stwo-prover = { git = "https://github.com/han0110/stwo", branch = "bench", features = ["parallel"] }
 
+[profile.release]
+lto = "fat"
+
 [[bench]]
 name = "stwo"
 harness = false
