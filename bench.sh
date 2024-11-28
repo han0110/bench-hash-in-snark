@@ -2,11 +2,11 @@
 
 measure_peak_memory() {
     AWK_SCRIPT='function human_size(x) {
-        if (x<1000) {return x} else {x/=1024}
+        if (x<1000) {return x " B"} else {x/=1024}
         s="MGTEPZY";
         while (x>=1000 && length(s)>1)
             {x/=1024; s=substr(s,2)}
-        return int(x+0.5) substr(s,1,1)
+        return int(x+0.5) " " substr(s,1,1) "B"
     } {sub(/^[0-9]+/, human_size($1)); print}'
     $(which time) -f '%M' "$@" 2>&1 | awk "$AWK_SCRIPT"
 }

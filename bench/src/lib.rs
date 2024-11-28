@@ -124,7 +124,8 @@ macro_rules! main {
                 ),)*
             };
             println!(
-                "      time: {time:?}\nthroughput: {}\nproof size: {}",
+                "      time: {}\nthroughput: {}\nproof size: {}",
+                $crate::util::human_time(time),
                 $crate::util::human_throughput(throughput),
                 $crate::util::human_size(proof_size),
             );
