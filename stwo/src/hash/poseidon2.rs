@@ -1,5 +1,4 @@
 use bench::HashInSnark;
-use core::fmt::Debug;
 use rand::RngCore;
 use stwo_prover::{
     constraint_framework::TraceLocationAllocator,
@@ -9,7 +8,7 @@ use stwo_prover::{
         fields::qm31::QM31,
         fri::FriConfig,
         pcs::{CommitmentSchemeVerifier, PcsConfig, TreeVec},
-        prover::{verify, StarkProof},
+        prover::{verify, StarkProof, VerificationError},
         vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
         ColumnVec,
     },
@@ -30,6 +29,7 @@ impl HashInSnark for StwoPoseidon2 {
         TreeVec<ColumnVec<u32>>,
         StarkProof<Blake2sMerkleHasher>,
     );
+    type Error = VerificationError;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -65,7 +65,7 @@ impl HashInSnark for StwoPoseidon2 {
         )
     }
 
-    fn verify(&self, (total_sum, sizes, proof): &Self::Proof) -> Result<(), impl Debug> {
+    fn verify(&self, (total_sum, sizes, proof): &Self::Proof) -> Result<(), Self::Error> {
         let mut channel = Blake2sChannel::default();
         let mut commitment_scheme =
             CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(self.config);

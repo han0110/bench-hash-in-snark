@@ -1,7 +1,6 @@
 use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
 use bench::HashInSnark;
-use core::fmt::Debug;
-use p3_uni_stark::{prove, verify, Proof};
+use p3_uni_stark::{prove, verify, PcsError, Proof, VerificationError};
 use rand::RngCore;
 
 pub mod circuit;
@@ -19,6 +18,7 @@ where
 {
     type Input = Circuit::Input;
     type Proof = Proof<Config::StarkGenericConfig>;
+    type Error = VerificationError<PcsError<Config::StarkGenericConfig>>;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -49,7 +49,7 @@ where
         )
     }
 
-    fn verify(&self, proof: &Self::Proof) -> Result<(), impl Debug> {
+    fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         let mut challenger = self.config.challenger();
         verify(
             self.config.stark_config(),

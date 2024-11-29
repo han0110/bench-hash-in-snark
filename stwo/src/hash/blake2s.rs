@@ -1,10 +1,10 @@
 use bench::HashInSnark;
-use core::fmt::Debug;
 use rand::RngCore;
 use stwo_prover::{
     core::{
         fri::FriConfig,
         pcs::PcsConfig,
+        prover::VerificationError,
         vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
     },
     examples::blake::{prove_blake, verify_blake, BlakeProof},
@@ -18,6 +18,7 @@ pub struct StwoBlake2s {
 impl HashInSnark for StwoBlake2s {
     type Input = ();
     type Proof = BlakeProof<Blake2sMerkleHasher>;
+    type Error = VerificationError;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -47,7 +48,7 @@ impl HashInSnark for StwoBlake2s {
         prove_blake::<Blake2sMerkleChannel>(self.num_permutations.ilog2(), self.config)
     }
 
-    fn verify(&self, proof: &Self::Proof) -> Result<(), impl Debug> {
+    fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         verify_blake::<Blake2sMerkleChannel>(
             bincode::deserialize(&bincode::serialize(proof).unwrap()).unwrap(),
             self.config,

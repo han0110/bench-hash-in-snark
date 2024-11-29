@@ -8,6 +8,7 @@ pub mod util;
 pub trait HashInSnark {
     type Input;
     type Proof;
+    type Error: Debug;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -19,11 +20,11 @@ pub trait HashInSnark {
 
     fn prove(&self, input: Self::Input) -> Self::Proof;
 
-    fn verify(&self, proof: &Self::Proof) -> Result<(), impl Debug>;
+    fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error>;
 
     fn serialize_proof(proof: &Self::Proof) -> Vec<u8>;
 
-    fn deserialize_proof(data: &[u8]) -> Self::Proof;
+    fn deserialize_proof(bytes: &[u8]) -> Self::Proof;
 
     fn proof_size(&self) -> usize {
         let mut rng = StdRng::from_entropy();
@@ -62,6 +63,17 @@ pub fn run<H: HashInSnark>(num_permutations: usize) {
     let input = black_box(snark.generate_input(StdRng::from_entropy()));
     let proof = snark.prove(input);
     drop(black_box(proof));
+}
+
+pub fn test<H: HashInSnark>(num_permutations: usize) -> Result<(), H::Error> {
+    let snark = H::new(num_permutations);
+    let input = snark.generate_input(StdRng::from_entropy());
+    let proof = snark.prove(input);
+    snark.verify(&proof)?;
+    let bytes = H::serialize_proof(&proof);
+    let proof = H::deserialize_proof(&bytes);
+    snark.verify(&proof)?;
+    Ok(())
 }
 
 pub fn bench<H: HashInSnark>(

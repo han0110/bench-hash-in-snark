@@ -3,7 +3,7 @@
 use bench::HashInSnark;
 use binius_circuits::builder::ConstraintSystemBuilder;
 use binius_core::{
-    constraint_system::{self, Proof},
+    constraint_system::{self, error::Error, Proof},
     fiat_shamir::HasherChallenger,
     tower::AESTowerFamily,
 };
@@ -11,7 +11,6 @@ use binius_field::{arch::OptimalUnderlier, AESTowerField128b, AESTowerField16b, 
 use binius_hal::make_portable_backend;
 use binius_hash::{Groestl256, GroestlDigestCompression};
 use binius_math::DefaultEvaluationDomainFactory;
-use core::fmt::Debug;
 use rand::RngCore;
 
 type U = OptimalUnderlier;
@@ -27,6 +26,7 @@ pub struct BiniusGroestl {
 impl HashInSnark for BiniusGroestl {
     type Input = ();
     type Proof = Proof;
+    type Error = Error;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -77,7 +77,7 @@ impl HashInSnark for BiniusGroestl {
         .unwrap()
     }
 
-    fn verify(&self, proof: &Self::Proof) -> Result<(), impl Debug> {
+    fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         let mut builder = ConstraintSystemBuilder::<U, AESTowerField128b, AESTowerField16b>::new();
         let log_n_permutations = self.num_permutations.ilog2() as usize;
         let log_size = log_n_permutations + LOG_ROWS_PER_PERMUTATION;

@@ -3,7 +3,7 @@
 use bench::HashInSnark;
 use binius_circuits::{builder::ConstraintSystemBuilder, unconstrained::unconstrained};
 use binius_core::{
-    constraint_system::{self, Proof},
+    constraint_system::{self, error::Error, Proof},
     fiat_shamir::HasherChallenger,
     tower::CanonicalTowerFamily,
 };
@@ -11,10 +11,7 @@ use binius_field::{arch::OptimalUnderlier, BinaryField128b, BinaryField1b, Binar
 use binius_hal::make_portable_backend;
 use binius_hash::{GroestlDigestCompression, GroestlHasher};
 use binius_math::DefaultEvaluationDomainFactory;
-use core::{
-    array::{self},
-    fmt::Debug,
-};
+use core::array;
 use groestl_crypto::Groestl256;
 use rand::RngCore;
 
@@ -31,6 +28,7 @@ pub struct BiniusKeccak {
 impl HashInSnark for BiniusKeccak {
     type Input = ();
     type Proof = Proof;
+    type Error = Error;
 
     fn new(num_permutations: usize) -> Self
     where
@@ -84,7 +82,7 @@ impl HashInSnark for BiniusKeccak {
         .unwrap()
     }
 
-    fn verify(&self, proof: &Self::Proof) -> Result<(), impl Debug> {
+    fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         let mut builder = ConstraintSystemBuilder::<U, BinaryField128b, BinaryField8b>::new();
         let log_n_permutations = self.num_permutations.ilog2() as usize;
         let log_size = log_n_permutations + LOG_ROWS_PER_PERMUTATION;
