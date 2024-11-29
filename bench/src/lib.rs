@@ -110,18 +110,16 @@ macro_rules! main {
         fn main() {
             let args: Args = clap::Parser::parse();
 
-            if args.sample_size.is_none() {
+            let Some(sample_size) = args.sample_size else {
                 match args.hash {
                     $(Hash::$variant => $crate::run::<$snark>(1 << args.log_permutations),)*
                 }
                 return;
-            }
+            };
 
+            let num_permutations = 1 << args.log_permutations;
             let (_, time, throughput, proof_size) = match args.hash {
-                $(Hash::$variant => $crate::bench::<$snark>(
-                    1 << args.log_permutations,
-                    args.sample_size.unwrap_or(10),
-                ),)*
+                $(Hash::$variant => $crate::bench::<$snark>(num_permutations, sample_size),)*
             };
             println!(
                 "      time: {}\nthroughput: {}\nproof size: {}",
