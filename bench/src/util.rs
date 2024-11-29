@@ -1,5 +1,9 @@
 use std::time::Duration;
 
+pub fn po2(exps: impl IntoIterator<Item = usize>) -> impl Iterator<Item = usize> {
+    exps.into_iter().map(|exp| 1 << exp)
+}
+
 pub fn human_time(time: Duration) -> String {
     let time = time.as_nanos();
     if time < 1_000 {
