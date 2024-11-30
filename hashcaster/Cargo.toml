@@ -10,12 +10,22 @@ clap = { version = "4.5.21", features = ["derive"] }
 criterion = "0.5.1"
 rand = "0.8.5"
 
+binius_core = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_field = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_hal = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_hash = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_macros = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_math = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_ntt = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_utils = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+groestl_crypto = { package = "groestl", version = "0.10.1" }
 hashcaster = { git = "https://github.com/han0110/hashcaster", branch = "bench" }
 itertools = "0.13.0"
 num-traits = "0.2.19"
-p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
-p3-keccak = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
-p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
+p3-challenger = { git = "https://github.com/Plonky3/Plonky3", rev = "72936761" }
+p3-keccak = { git = "https://github.com/Plonky3/Plonky3", rev = "72936761" }
+p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "72936761" }
+rayon = "1"
 serde = { version = "1.0.215", features = ["derive"] }
 
 [profile.release]

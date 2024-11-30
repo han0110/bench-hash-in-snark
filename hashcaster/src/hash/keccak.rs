@@ -1,7 +1,16 @@
 // Copied and modified from https://github.com/morgana-proofs/hashcaster/blob/d9891c0/src/examples/keccak/main_protocol.rs.
 
-use crate::util::{Error, F128Challenger, SumcheckError, SumcheckProof};
+use crate::util::{
+    deserialize_packed, serialize_packed, Error, F128Challenger, F128FriPcs, FriPcsProof, Packed,
+    SumcheckError, SumcheckProof,
+};
 use bench::HashInSnark;
+use binius_field::{
+    arch::OptimalUnderlier, as_packed_field::PackedType, BinaryField128b, BinaryField8b,
+    PackedField,
+};
+use binius_hash::{GroestlDigestCompression, GroestlHasher};
+use binius_math::DefaultEvaluationDomainFactory;
 use core::array::from_fn;
 use hashcaster::{
     examples::keccak::{
@@ -27,18 +36,32 @@ const NUM_VARS_PER_PERMUTATIONS: usize = 10 + 3 - 7;
 const BOOL_CHECK_C: usize = 5;
 const LIN_CHECK_NUM_VARS: usize = 10;
 
+type U = OptimalUnderlier;
+
+#[allow(clippy::type_complexity)]
 pub struct HashcasterKeccak {
     num_permutations: usize,
+    pcs: F128FriPcs<
+        U,
+        PackedType<U, BinaryField8b>,
+        DefaultEvaluationDomainFactory<BinaryField8b>,
+        GroestlHasher<BinaryField128b>,
+        GroestlDigestCompression<BinaryField8b>,
+    >,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HashcasterKeccakProof {
-    _layer0_comm: (),
+    #[serde(
+        serialize_with = "serialize_packed::<_, U>",
+        deserialize_with = "deserialize_packed::<_, U>"
+    )]
+    layer0_comm: Packed<U, BinaryField8b>,
     layer2_claims: [F128; 5],
     bool_check_proof: SumcheckProof,
     multi_open_proof: SumcheckProof,
     lin_check_proof: SumcheckProof,
-    _layer0_opening: (),
+    layer0_open_proof: FriPcsProof,
 }
 
 impl HashInSnark for HashcasterKeccak {
@@ -51,7 +74,14 @@ impl HashInSnark for HashcasterKeccak {
         Self: Sized,
     {
         let num_permutations = num_permutations.next_power_of_two();
-        Self { num_permutations }
+        let security_bits = 100;
+        let log_inv_rate = 1;
+        let num_vars = num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS;
+        let pcs = F128FriPcs::new(security_bits, log_inv_rate, num_vars, 5);
+        Self {
+            num_permutations,
+            pcs,
+        }
     }
 
     fn num_permutations(&self) -> usize {
@@ -70,7 +100,11 @@ impl HashInSnark for HashcasterKeccak {
         let layer1 = keccak_linround_witness(layer0.each_ref().map(|poly| poly.as_slice()));
         let layer2 = chi_round_witness(&layer1);
 
-        // TODO: Commit layer0 and observe layer0 commitment.
+        let (layer0_packed, layer0_comm, layer0_committed) = self.pcs.commit(&layer0);
+
+        layer0_comm
+            .iter()
+            .for_each(|scalar| challenger.observe(scalar));
 
         let layer2_point = challenger.sample_vec(self.num_vars());
         let layer2_claims: [F128; 5] = layer2.each_ref().map(|poly| evaluate(poly, &layer2_point));
@@ -79,27 +113,32 @@ impl HashInSnark for HashcasterKeccak {
         let (bool_check_proof, multi_open_proof, layer1_point) =
             self.prove_layer2(&layer1, &layer2_point, &layer2_claims, &mut challenger);
 
-        let (lin_check_proof, _layer0_point) = {
+        let (lin_check_proof, layer0_point) = {
             let layer1_claims = multi_open_proof.evals.clone().try_into().unwrap();
             self.prove_layer1(&layer0, &layer1_point, &layer1_claims, &mut challenger)
         };
 
-        // TODO: Open layer0 at layer0_point.
+        let layer0_open_proof = self
+            .pcs
+            .open(&layer0_packed, &layer0_committed, &layer0_point);
 
         HashcasterKeccakProof {
-            _layer0_comm: (),
+            layer0_comm,
             layer2_claims,
             bool_check_proof,
             multi_open_proof,
             lin_check_proof,
-            _layer0_opening: (),
+            layer0_open_proof,
         }
     }
 
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         let mut challenger = F128Challenger::keccak256();
 
-        // TODO: Observe layer0 commitment.
+        proof
+            .layer0_comm
+            .iter()
+            .for_each(|scalar| challenger.observe(scalar));
 
         let layer2_point = challenger.sample_vec(self.num_vars());
         challenger.observe_slice(&proof.layer2_claims);
@@ -112,7 +151,7 @@ impl HashInSnark for HashcasterKeccak {
             &mut challenger,
         )?;
 
-        let _layer0_point = {
+        let layer0_point = {
             let layer1_claims = proof.multi_open_proof.evals.clone().try_into().unwrap();
             self.verify_layer1(
                 &layer1_point,
@@ -122,9 +161,12 @@ impl HashInSnark for HashcasterKeccak {
             )?
         };
 
-        // TODO: Verify opening layer0 at layer0_point.
-
-        Ok(())
+        self.pcs.verify(
+            &proof.layer0_comm,
+            &proof.layer0_open_proof,
+            &layer0_point,
+            &proof.lin_check_proof.evals,
+        )
     }
 
     fn serialize_proof(proof: &Self::Proof) -> Vec<u8> {
