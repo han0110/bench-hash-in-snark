@@ -5,13 +5,13 @@ use binius_core::{
         batch_pcs::{self, BatchPCS},
         PolyCommitScheme, FRIPCS,
     },
-    tower::{CanonicalTowerFamily, PackedTop, TowerFamily, TowerUnderlier},
+    tower::{PackedTop, TowerFamily, TowerUnderlier},
     transcript::{AdviceReader, AdviceWriter, TranscriptReader, TranscriptWriter},
 };
 use binius_field::{
     as_packed_field::{PackScalar, PackedType},
-    BinaryField128b, BinaryField128bPolyval, BinaryField8b, PackedExtension, PackedField,
-    PackedFieldIndexable, TowerField,
+    AESTowerField8b, BinaryField, BinaryField128b, BinaryField128bPolyval, BinaryField8b,
+    ExtensionField, Field, PackedExtension, PackedField, PackedFieldIndexable, TowerField,
 };
 use binius_hal::make_portable_backend;
 use binius_hash::Hasher;
@@ -97,6 +97,15 @@ where
     }
 }
 
+impl<H> CanObserve<AESTowerField8b> for F128Challenger<H>
+where
+    H: CryptographicHasher<u8, [u8; 32]>,
+{
+    fn observe(&mut self, value: AESTowerField8b) {
+        self.inner.observe(u8::from(value));
+    }
+}
+
 impl<H> CanSample<F128> for F128Challenger<H>
 where
     H: CryptographicHasher<u8, [u8; 32]>,
@@ -109,40 +118,39 @@ where
 // Copied and modified from https://github.com/IrreducibleOSS/binius/blob/9791abc/crates/core/src/constraint_system/common.rs.
 // TODO: Implement PCS directly for `BinaryField128bPolyval` instead of using isomorphic to `BinaryField128b`.
 
-pub type Tower = CanonicalTowerFamily;
+pub type FExt<Tower> = <Tower as TowerFamily>::B128;
 
-pub type FExt = <Tower as TowerFamily>::B128;
+pub type FDomain<Tower> = <Tower as TowerFamily>::B8;
 
-pub type FDomain = <Tower as TowerFamily>::B8;
+pub type FEncode<Tower> = <Tower as TowerFamily>::B32;
 
-pub type FEncode = <Tower as TowerFamily>::B32;
-
-pub type BatchFRIMerklePCS<U, F, Digest, DomainFactory, Hash, Compress> = BatchPCS<
-    <PackedType<U, FExt> as PackedExtension<F>>::PackedSubfield,
-    FExt,
+pub type BatchFRIPCS<Tower, U, F, Digest, DomainFactory, Hash, Compress> = BatchPCS<
+    <PackedType<U, FExt<Tower>> as PackedExtension<F>>::PackedSubfield,
+    FExt<Tower>,
     FRIPCS<
         F,
-        FDomain,
-        FEncode,
-        PackedType<U, FExt>,
+        FDomain<Tower>,
+        FEncode<Tower>,
+        PackedType<U, FExt<Tower>>,
         DomainFactory,
         BinaryMerkleTreeProver<Digest, Hash, Compress>,
         BinaryMerkleTreeScheme<Digest, Hash, Compress>,
     >,
 >;
 
-pub type Packed<U, F> = <<U as PackScalar<F>>::Packed as PackedExtension<F>>::PackedSubfield;
+pub type PackedSubfield<U, F> =
+    <<U as PackScalar<F>>::Packed as PackedExtension<F>>::PackedSubfield;
 
-pub type Commitment<U, F, Digest, DomainFactory, Hash, Compress> =
-    <BatchFRIMerklePCS<U, F, Digest, DomainFactory, Hash, Compress> as PolyCommitScheme<
-        <PackedType<U, FExt> as PackedExtension<F>>::PackedSubfield,
-        FExt,
+pub type Commitment<Tower, U, F, Digest, DomainFactory, Hash, Compress> =
+    <BatchFRIPCS<Tower, U, F, Digest, DomainFactory, Hash, Compress> as PolyCommitScheme<
+        <PackedType<U, FExt<Tower>> as PackedExtension<F>>::PackedSubfield,
+        FExt<Tower>,
     >>::Commitment;
 
-pub type Committed<U, F, Digest, DomainFactory, Hash, Compress> =
-    <BatchFRIMerklePCS<U, F, Digest, DomainFactory, Hash, Compress> as PolyCommitScheme<
-        <PackedType<U, FExt> as PackedExtension<F>>::PackedSubfield,
-        FExt,
+pub type Committed<Tower, U, F, Digest, DomainFactory, Hash, Compress> =
+    <BatchFRIPCS<Tower, U, F, Digest, DomainFactory, Hash, Compress> as PolyCommitScheme<
+        <PackedType<U, FExt<Tower>> as PackedExtension<F>>::PackedSubfield,
+        FExt<Tower>,
     >>::Committed;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -151,26 +159,36 @@ pub struct FriPcsProof {
     advice: Vec<u8>,
 }
 
-pub struct F128FriPcs<U, Digest, DomainFactory, Hash, Compress>
+pub struct BatchFRIPCS128<Tower, U, Digest, DomainFactory, Hash, Compress>
 where
-    U: TowerUnderlier<Tower> + PackScalar<BinaryField128b>,
-    DomainFactory: EvaluationDomainFactory<<Tower as TowerFamily>::B8>,
+    U: TowerUnderlier<Tower> + PackScalar<Tower::B128>,
+    Tower: TowerFamily,
+    Tower::B128:
+        PackedTop<Tower> + ExtensionField<Tower::B128> + PackedExtension<Tower::B128> + TowerField,
     Digest: PackedField<Scalar: TowerField>,
-    Hash: Hasher<<Tower as TowerFamily>::B128, Digest = Digest> + Send + Sync,
+    DomainFactory: EvaluationDomainFactory<Tower::B8>,
+    Hash: Hasher<Tower::B128, Digest = Digest> + Send + Sync,
     Compress: PseudoCompressionFunction<Digest, 2> + Default + Sync,
-    PackedType<U, <Tower as TowerFamily>::B128>: PackedTop<Tower> + PackedFieldIndexable,
+    PackedType<U, Tower::B128>: PackedTop<Tower> + PackedFieldIndexable,
 {
-    batch_fri_pcs: BatchFRIMerklePCS<U, BinaryField128b, Digest, DomainFactory, Hash, Compress>,
+    batch_fri_pcs: BatchFRIPCS<Tower, U, Tower::B128, Digest, DomainFactory, Hash, Compress>,
 }
 
-impl<U, Digest, DomainFactory, Hash, Compress> F128FriPcs<U, Digest, DomainFactory, Hash, Compress>
+impl<Tower, U, Digest, DomainFactory, Hash, Compress>
+    BatchFRIPCS128<Tower, U, Digest, DomainFactory, Hash, Compress>
 where
-    U: TowerUnderlier<Tower> + PackScalar<BinaryField128b>,
-    DomainFactory: EvaluationDomainFactory<<Tower as TowerFamily>::B8> + Default,
+    U: TowerUnderlier<Tower> + PackScalar<Tower::B128>,
+    Tower: TowerFamily,
+    Tower::B128: PackedTop<Tower>
+        + ExtensionField<Tower::B128>
+        + PackedExtension<Tower::B128>
+        + TowerField
+        + From<BinaryField128b>,
     Digest: PackedField<Scalar: TowerField>,
-    Hash: Hasher<<Tower as TowerFamily>::B128, Digest = Digest> + Send + Sync,
+    DomainFactory: EvaluationDomainFactory<Tower::B8> + Default,
+    Hash: Hasher<Tower::B128, Digest = Digest> + Send + Sync,
     Compress: PseudoCompressionFunction<Digest, 2> + Default + Sync,
-    PackedType<U, <Tower as TowerFamily>::B128>: PackedTop<Tower> + PackedFieldIndexable,
+    PackedType<U, Tower::B128>: PackedTop<Tower> + PackedFieldIndexable,
 {
     pub fn new(
         security_bits: usize,
@@ -183,8 +201,8 @@ where
         let fri_n_vars = num_vars + log_n_polys;
         let fri_pcs = FRIPCS::<
             _,
-            FDomain,
-            FEncode,
+            FDomain<Tower>,
+            FEncode<Tower>,
             PackedType<U, <Tower as TowerFamily>::B128>,
             _,
             _,
@@ -201,29 +219,21 @@ where
         let batch_fri_pcs = BatchPCS::new(fri_pcs, num_vars, log_n_polys).unwrap();
         Self { batch_fri_pcs }
     }
-}
 
-impl<U, Digest, DomainFactory, Hash, Compress> F128FriPcs<U, Digest, DomainFactory, Hash, Compress>
-where
-    U: TowerUnderlier<Tower> + PackScalar<BinaryField128b>,
-    DomainFactory: EvaluationDomainFactory<<Tower as TowerFamily>::B8>,
-    Digest: PackedField<Scalar: TowerField>,
-    Hash: Hasher<<Tower as TowerFamily>::B128, Digest = Digest> + Send + Sync,
-    Compress: PseudoCompressionFunction<Digest, 2> + Default + Sync,
-    PackedType<U, <Tower as TowerFamily>::B128>: PackedTop<Tower> + PackedFieldIndexable,
-{
     #[allow(clippy::type_complexity)]
     pub fn commit(
         &self,
         polys: &[Vec<F128>],
     ) -> (
-        Vec<MultilinearExtension<Packed<U, BinaryField128b>>>,
-        Commitment<U, BinaryField128b, Digest, DomainFactory, Hash, Compress>,
-        Committed<U, BinaryField128b, Digest, DomainFactory, Hash, Compress>,
+        Vec<MultilinearExtension<PackedSubfield<U, Tower::B128>>>,
+        Commitment<Tower, U, Tower::B128, Digest, DomainFactory, Hash, Compress>,
+        Committed<Tower, U, Tower::B128, Digest, DomainFactory, Hash, Compress>,
     ) {
         let polys = polys
             .par_iter()
-            .map(|poly| MultilinearExtension::from_values(pack_slice::<U>(poly)).unwrap())
+            .map(|poly| {
+                MultilinearExtension::from_values(iso_slice_packed::<U, Tower::B128>(poly)).unwrap()
+            })
             .collect::<Vec<_>>();
         let (commitment, committed) = self.batch_fri_pcs.commit(&polys).unwrap();
         (polys, commitment, committed)
@@ -231,8 +241,8 @@ where
 
     pub fn open(
         &self,
-        polys: &[MultilinearExtension<Packed<U, BinaryField128b>>],
-        committed: &Committed<U, BinaryField128b, Digest, DomainFactory, Hash, Compress>,
+        polys: &[MultilinearExtension<PackedSubfield<U, Tower::B128>>],
+        committed: &Committed<Tower, U, Tower::B128, Digest, DomainFactory, Hash, Compress>,
         point: &[F128],
     ) -> FriPcsProof {
         let mut transcript = TranscriptWriter::<HasherChallenger<Groestl256>>::default();
@@ -256,7 +266,7 @@ where
 
     pub fn verify(
         &self,
-        commitment: &Commitment<U, BinaryField128b, Digest, DomainFactory, Hash, Compress>,
+        commitment: &Commitment<Tower, U, Tower::B128, Digest, DomainFactory, Hash, Compress>,
         proof: &FriPcsProof,
         point: &[F128],
         evals: &[F128],
@@ -279,23 +289,27 @@ where
 }
 
 #[inline(always)]
-fn iso(value: &F128) -> BinaryField128b {
-    BinaryField128b::from(BinaryField128bPolyval::from(value.raw()))
+fn iso<F: From<BinaryField128b>>(value: &F128) -> F {
+    F::from(BinaryField128b::from(BinaryField128bPolyval::from(
+        value.raw(),
+    )))
 }
 
-fn iso_slice(values: &[F128]) -> Vec<BinaryField128b> {
+fn iso_slice<F: From<BinaryField128b>>(values: &[F128]) -> Vec<F> {
     values.iter().map(iso).collect()
 }
 
-fn pack_slice<U: PackScalar<BinaryField128b>>(values: &[F128]) -> Vec<Packed<U, BinaryField128b>> {
+fn iso_slice_packed<U: PackScalar<F>, F: Field + From<BinaryField128b>>(
+    values: &[F128],
+) -> Vec<PackedSubfield<U, F>> {
     values
-        .par_chunks(Packed::<U, BinaryField128b>::WIDTH)
-        .map(|scalars| Packed::<U, BinaryField128b>::from_scalars(scalars.iter().map(iso)))
+        .par_chunks(PackedSubfield::<U, F>::WIDTH)
+        .map(|scalars| PackedSubfield::<U, F>::from_scalars(scalars.iter().map(iso)))
         .collect()
 }
 
-pub fn serialize_packed<S, U: PackScalar<BinaryField8b>>(
-    v: &Packed<U, BinaryField8b>,
+pub fn serialize_packed<S, U: PackScalar<F>, F: BinaryField + Into<u8>>(
+    v: &PackedType<U, F>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
@@ -304,12 +318,12 @@ where
     serializer.serialize_bytes(&v.iter().map_into().collect_vec())
 }
 
-pub fn deserialize_packed<'de, D, U: PackScalar<BinaryField8b>>(
+pub fn deserialize_packed<'de, D, U: PackScalar<F>, F: BinaryField + From<u8>>(
     deserializer: D,
-) -> Result<Packed<U, BinaryField8b>, D::Error>
+) -> Result<PackedType<U, F>, D::Error>
 where
     D: Deserializer<'de>,
 {
     Vec::<u8>::deserialize(deserializer)
-        .map(|bytes| Packed::<U, BinaryField8b>::from_scalars(bytes.into_iter().map_into()))
+        .map(|bytes| PackedType::<U, F>::from_scalars(bytes.into_iter().map_into()))
 }

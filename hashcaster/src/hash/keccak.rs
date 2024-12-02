@@ -1,16 +1,18 @@
 // Copied and modified from https://github.com/morgana-proofs/hashcaster/blob/d9891c0/src/examples/keccak/main_protocol.rs.
 
 use crate::util::{
-    deserialize_packed, serialize_packed, Error, F128Challenger, F128FriPcs, FriPcsProof, Packed,
+    deserialize_packed, serialize_packed, BatchFRIPCS128, Error, F128Challenger, FriPcsProof,
     SumcheckError, SumcheckProof,
 };
 use bench::HashInSnark;
+use binius_core::tower::{AESTowerFamily, TowerFamily};
 use binius_field::{
-    arch::OptimalUnderlier, as_packed_field::PackedType, BinaryField128b, BinaryField8b,
-    PackedField,
+    arch::OptimalUnderlier,
+    as_packed_field::{PackScalar, PackedType},
+    BinaryField, PackedField,
 };
-use binius_hash::{GroestlDigestCompression, GroestlHasher};
-use binius_math::DefaultEvaluationDomainFactory;
+use binius_hash::{Groestl256, GroestlDigestCompression};
+use binius_math::IsomorphicEvaluationDomainFactory;
 use core::array::from_fn;
 use hashcaster::{
     examples::keccak::{
@@ -37,26 +39,33 @@ const BOOL_CHECK_C: usize = 5;
 const LIN_CHECK_NUM_VARS: usize = 10;
 
 type U = OptimalUnderlier;
+type Tower = AESTowerFamily;
+type DomainFactory = IsomorphicEvaluationDomainFactory<<Tower as TowerFamily>::B8>;
 
 #[allow(clippy::type_complexity)]
 pub struct HashcasterKeccak {
     num_permutations: usize,
-    pcs: F128FriPcs<
+    pcs: BatchFRIPCS128<
+        Tower,
         U,
-        PackedType<U, BinaryField8b>,
-        DefaultEvaluationDomainFactory<BinaryField8b>,
-        GroestlHasher<BinaryField128b>,
-        GroestlDigestCompression<BinaryField8b>,
+        PackedType<U, <Tower as TowerFamily>::B8>,
+        DomainFactory,
+        Groestl256<<Tower as TowerFamily>::B128, <Tower as TowerFamily>::B8>,
+        GroestlDigestCompression<<Tower as TowerFamily>::B8>,
     >,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HashcasterKeccakProof {
+pub struct HashcasterKeccakProof<F: BinaryField + From<u8> + Into<u8>>
+where
+    U: PackScalar<F>,
+{
     #[serde(
-        serialize_with = "serialize_packed::<_, U>",
-        deserialize_with = "deserialize_packed::<_, U>"
+        serialize_with = "serialize_packed::<_, U, F>",
+        deserialize_with = "deserialize_packed::<_, U, F>",
+        bound = "U: PackScalar<F>, F: BinaryField + From<u8> + Into<u8>"
     )]
-    layer0_comm: Packed<U, BinaryField8b>,
+    layer0_comm: PackedType<U, F>,
     layer2_claims: [F128; 5],
     bool_check_proof: SumcheckProof,
     multi_open_proof: SumcheckProof,
@@ -66,7 +75,7 @@ pub struct HashcasterKeccakProof {
 
 impl HashInSnark for HashcasterKeccak {
     type Input = [Vec<F128>; 5];
-    type Proof = HashcasterKeccakProof;
+    type Proof = HashcasterKeccakProof<<Tower as TowerFamily>::B8>;
     type Error = Error;
 
     fn new(num_permutations: usize) -> Self
@@ -77,7 +86,7 @@ impl HashInSnark for HashcasterKeccak {
         let security_bits = 100;
         let log_inv_rate = 1;
         let num_vars = num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS;
-        let pcs = F128FriPcs::new(security_bits, log_inv_rate, num_vars, 5);
+        let pcs = BatchFRIPCS128::new(security_bits, log_inv_rate, num_vars, 5);
         Self {
             num_permutations,
             pcs,
