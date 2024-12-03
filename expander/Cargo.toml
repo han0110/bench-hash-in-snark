@@ -15,6 +15,7 @@ expander_circuit = { git = "https://github.com/PolyhedraZK/Expander", rev = "641
 expander_config = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "config" }
 expander_gkr = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "gkr" }
 expander_transcript = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "transcript" }
+rayon = "1"
 
 [profile.release]
 lto = "fat"

@@ -185,6 +185,7 @@ dependencies = [
  "criterion",
  "gkr",
  "rand",
+ "rayon",
  "transcript",
 ]
 

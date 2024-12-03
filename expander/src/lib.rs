@@ -5,7 +5,8 @@ use expander_config::{Config, FiatShamirHashType, GKRConfig, GKRScheme};
 use expander_gkr::{gkr_verify, Prover};
 use expander_transcript::{BytesHashTranscript, Keccak256hasher, SHA256hasher, Transcript};
 use rand::RngCore;
-use std::{cell::RefCell, io::Cursor};
+use rayon::{current_num_threads, prelude::*};
+use std::{cell::RefCell, io::Cursor, iter::repeat_with};
 
 pub mod circuit;
 
@@ -21,29 +22,35 @@ pub struct Expander<C: ExpanderCircuit> {
     num_permutations: usize,
     config: Config<C::Config>,
     circuit: Circuit<C::Config>,
-    prover: RefCell<Prover<C::Config>>,
+    provers: RefCell<Vec<Prover<C::Config>>>,
 }
 
 impl<C: ExpanderCircuit> HashInSnark for Expander<C> {
-    type Input = Circuit<C::Config>;
-    type Proof = (<C::Config as GKRConfig>::ChallengeField, Vec<u8>);
+    type Input = Vec<Circuit<C::Config>>;
+    type Proof = Vec<(<C::Config as GKRConfig>::ChallengeField, Vec<u8>)>;
     type Error = ();
 
     fn new(num_permutations: usize) -> Self
     where
         Self: Sized,
     {
-        let num_permutations = num_permutations.next_power_of_two();
+        let current_num_threads = current_num_threads();
+        let num_permutations = (num_permutations / current_num_threads).next_power_of_two();
         let circuit_path = format!("{}/{}.txt", C::CIRCUIT_DIR, num_permutations.ilog2());
         let circuit = Circuit::load_circuit(&circuit_path);
         let config = Config::new(C::scheme(), Default::default());
-        let mut prover = Prover::new(&config);
-        prover.prepare_mem(&circuit);
+        let provers = repeat_with(|| {
+            let mut prover = Prover::new(&config);
+            prover.prepare_mem(&circuit);
+            prover
+        })
+        .take(current_num_threads)
+        .collect::<Vec<_>>();
         Self {
             num_permutations,
             config,
             circuit,
-            prover: prover.into(),
+            provers: provers.into(),
         }
     }
 
@@ -52,63 +59,81 @@ impl<C: ExpanderCircuit> HashInSnark for Expander<C> {
     }
 
     fn generate_input(&self, _: impl RngCore) -> Self::Input {
-        let mut circuit = self.circuit.clone();
-        circuit.set_random_input_for_test();
-        circuit
+        repeat_with(|| {
+            let mut circuit = self.circuit.clone();
+            circuit.set_random_input_for_test();
+            circuit
+        })
+        .take(self.provers.borrow().len())
+        .collect()
     }
 
-    fn prove(&self, mut circuit: Self::Input) -> Self::Proof {
-        let (claimed_v, transcript) = self.prover.borrow_mut().prove(&mut circuit);
-        (claimed_v, transcript.bytes)
+    fn prove(&self, circuits: Self::Input) -> Self::Proof {
+        self.provers
+            .borrow_mut()
+            .par_iter_mut()
+            .zip(circuits.into_par_iter())
+            .map(|(prover, mut circuit)| {
+                let (claimed_v, transcript) = prover.prove(&mut circuit);
+                (claimed_v, transcript.bytes)
+            })
+            .collect()
     }
 
-    fn verify(&self, (claimed_v, proof): &Self::Proof) -> Result<(), Self::Error> {
-        match C::Config::FIAT_SHAMIR_HASH {
-            FiatShamirHashType::Keccak256 => {
-                let mut transcript = BytesHashTranscript::<_, Keccak256hasher>::new();
-                let proof = Cursor::new(&proof);
-                gkr_verify(
-                    &self.config,
-                    &self.circuit,
-                    &[],
-                    claimed_v,
-                    &mut transcript,
-                    proof,
-                )
-            }
-            FiatShamirHashType::SHA256 => {
-                let mut transcript = BytesHashTranscript::<_, SHA256hasher>::new();
-                let proof = Cursor::new(&proof);
-                gkr_verify(
-                    &self.config,
-                    &self.circuit,
-                    &[],
-                    claimed_v,
-                    &mut transcript,
-                    proof,
-                )
-            }
-            _ => unreachable!(),
-        }
-        .0
-        .then_some(())
-        .ok_or(())
+    fn verify(&self, proofs: &Self::Proof) -> Result<(), Self::Error> {
+        proofs
+            .iter()
+            .all(|(claimed_v, proof)| {
+                match C::Config::FIAT_SHAMIR_HASH {
+                    FiatShamirHashType::Keccak256 => {
+                        let mut transcript = BytesHashTranscript::<_, Keccak256hasher>::new();
+                        let proof = Cursor::new(&proof);
+                        gkr_verify(
+                            &self.config,
+                            &self.circuit,
+                            &[],
+                            claimed_v,
+                            &mut transcript,
+                            proof,
+                        )
+                    }
+                    FiatShamirHashType::SHA256 => {
+                        let mut transcript = BytesHashTranscript::<_, SHA256hasher>::new();
+                        let proof = Cursor::new(&proof);
+                        gkr_verify(
+                            &self.config,
+                            &self.circuit,
+                            &[],
+                            claimed_v,
+                            &mut transcript,
+                            proof,
+                        )
+                    }
+                    _ => unreachable!(),
+                }
+                .0
+            })
+            .then_some(())
+            .ok_or(())
     }
 
-    fn serialize_proof((claimed_v, proof): &Self::Proof) -> Vec<u8> {
-        let mut claimed_v_bytes =
-            vec![0; <<C as ExpanderCircuit>::Config as GKRConfig>::ChallengeField::SERIALIZED_SIZE];
-        claimed_v.serialize_into(&mut claimed_v_bytes).unwrap();
-        bincode::serialize(&(claimed_v_bytes, proof)).unwrap()
+    fn serialize_proof(proofs: &Self::Proof) -> Vec<u8> {
+        bincode::serialize(&proofs.iter().map(|(claimed_v, proof)| {
+            let mut claimed_v_bytes =
+                vec![0; <<C as ExpanderCircuit>::Config as GKRConfig>::ChallengeField::SERIALIZED_SIZE];
+            claimed_v.serialize_into(&mut claimed_v_bytes).unwrap();
+            (claimed_v_bytes, proof)
+        }).collect::<Vec<_>>()).unwrap()
     }
 
     fn deserialize_proof(bytes: &[u8]) -> Self::Proof {
-        let (claimed_v_bytes, proof): (Vec<u8>, _) = bincode::deserialize(bytes).unwrap();
-        let claimed_v =
-            <<C as ExpanderCircuit>::Config as GKRConfig>::ChallengeField::deserialize_from(
-                claimed_v_bytes.as_slice(),
-            )
-            .unwrap();
-        (claimed_v, proof)
+        let proofs: Vec<(Vec<u8>, Vec<u8>)> = bincode::deserialize(bytes).unwrap();
+        proofs
+            .into_iter()
+            .map(|(claimed_v_bytes, proof)| {
+                let claimed_v = <_>::deserialize_from(claimed_v_bytes.as_slice()).unwrap();
+                (claimed_v, proof)
+            })
+            .collect()
     }
 }
