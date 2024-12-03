@@ -9,6 +9,6 @@ impl ExpanderCircuit for M31Poseidon {
     type Config = M31ExtConfigSha2;
 
     fn scheme() -> GKRScheme {
-        GKRScheme::GkrSquare
+        GKRScheme::Vanilla
     }
 }
