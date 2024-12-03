@@ -10,8 +10,8 @@ use binius_core::{
 };
 use binius_field::{
     as_packed_field::{PackScalar, PackedType},
-    AESTowerField8b, BinaryField, BinaryField128b, BinaryField128bPolyval, BinaryField8b,
-    ExtensionField, Field, PackedExtension, PackedField, PackedFieldIndexable, TowerField,
+    AESTowerField8b, BinaryField128b, BinaryField128bPolyval, BinaryField8b, ExtensionField, Field,
+    PackedExtension, PackedField, PackedFieldIndexable, TowerField,
 };
 use binius_hal::make_portable_backend;
 use binius_hash::Hasher;
@@ -308,8 +308,8 @@ fn iso_slice_packed<U: PackScalar<F>, F: Field + From<BinaryField128b>>(
         .collect()
 }
 
-pub fn serialize_packed<S, U: PackScalar<F>, F: BinaryField + Into<u8>>(
-    v: &PackedType<U, F>,
+pub fn serialize_packed<S, F: PackedField<Scalar: Into<u8>>>(
+    v: &F,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
@@ -318,12 +318,11 @@ where
     serializer.serialize_bytes(&v.iter().map_into().collect_vec())
 }
 
-pub fn deserialize_packed<'de, D, U: PackScalar<F>, F: BinaryField + From<u8>>(
+pub fn deserialize_packed<'de, D, F: PackedField<Scalar: From<u8>>>(
     deserializer: D,
-) -> Result<PackedType<U, F>, D::Error>
+) -> Result<F, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Vec::<u8>::deserialize(deserializer)
-        .map(|bytes| PackedType::<U, F>::from_scalars(bytes.into_iter().map_into()))
+    Vec::<u8>::deserialize(deserializer).map(|bytes| F::from_scalars(bytes.into_iter().map_into()))
 }

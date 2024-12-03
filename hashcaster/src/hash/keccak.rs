@@ -6,12 +6,8 @@ use crate::util::{
 };
 use bench::HashInSnark;
 use binius_core::tower::{AESTowerFamily, TowerFamily};
-use binius_field::{
-    arch::OptimalUnderlier,
-    as_packed_field::{PackScalar, PackedType},
-    BinaryField, PackedField,
-};
-use binius_hash::{Groestl256, GroestlDigestCompression};
+use binius_field::{arch::OptimalUnderlier, PackedField};
+use binius_hash::{Groestl256, GroestlDigest, GroestlDigestCompression};
 use binius_math::IsomorphicEvaluationDomainFactory;
 use core::array::from_fn;
 use hashcaster::{
@@ -48,7 +44,7 @@ pub struct HashcasterKeccak {
     pcs: BatchFRIPCS128<
         Tower,
         U,
-        PackedType<U, <Tower as TowerFamily>::B8>,
+        GroestlDigest<<Tower as TowerFamily>::B8>,
         DomainFactory,
         Groestl256<<Tower as TowerFamily>::B128, <Tower as TowerFamily>::B8>,
         GroestlDigestCompression<<Tower as TowerFamily>::B8>,
@@ -56,16 +52,12 @@ pub struct HashcasterKeccak {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HashcasterKeccakProof<F: BinaryField + From<u8> + Into<u8>>
-where
-    U: PackScalar<F>,
-{
+pub struct HashcasterKeccakProof {
     #[serde(
-        serialize_with = "serialize_packed::<_, U, F>",
-        deserialize_with = "deserialize_packed::<_, U, F>",
-        bound = "U: PackScalar<F>, F: BinaryField + From<u8> + Into<u8>"
+        serialize_with = "serialize_packed",
+        deserialize_with = "deserialize_packed"
     )]
-    layer0_comm: PackedType<U, F>,
+    layer0_comm: GroestlDigest<<Tower as TowerFamily>::B8>,
     layer2_claims: [F128; 5],
     bool_check_proof: SumcheckProof,
     multi_open_proof: SumcheckProof,
@@ -75,7 +67,7 @@ where
 
 impl HashInSnark for HashcasterKeccak {
     type Input = [Vec<F128>; 5];
-    type Proof = HashcasterKeccakProof<<Tower as TowerFamily>::B8>;
+    type Proof = HashcasterKeccakProof;
     type Error = Error;
 
     fn new(num_permutations: usize) -> Self
