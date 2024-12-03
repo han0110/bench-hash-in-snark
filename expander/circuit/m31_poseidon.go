@@ -35,7 +35,7 @@ func (c *M31PoseidonCircuit) Define(api frontend.API) error {
 }
 
 func NewM31PoseidonCircuit(logPerm int) M31PoseidonCircuit {
-	numRepeat := 1 << (logPerm - 4) // Minus 4 due to packing
+	numRepeat := 1 << logPerm
 	return M31PoseidonCircuit{
 		State:  make([][16]frontend.Variable, numRepeat),
 		Digest: make([]frontend.Variable, numRepeat),
@@ -43,7 +43,7 @@ func NewM31PoseidonCircuit(logPerm int) M31PoseidonCircuit {
 }
 
 func main() {
-	for _, logPerm := range []int{6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20} {
+	for _, logPerm := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14, 15, 16} {
 		circuit := NewM31PoseidonCircuit(logPerm)
 		result, err := ecgo.Compile(m31.ScalarField, &circuit, frontend.WithCompressThreshold(32))
 		if err != nil {

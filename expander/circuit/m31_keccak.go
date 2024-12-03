@@ -307,7 +307,7 @@ func (t *keccak256Circuit) Define(api frontend.API) error {
 }
 
 func NewKeccak256Circuit(logPerm int) keccak256Circuit {
-	rep := 1 << (logPerm - 4) // Minus 4 due to packing
+	rep := 1 << logPerm
 	return keccak256Circuit{
 		P:   make([][136 * 8]frontend.Variable, rep),
 		Out: make([][CheckPartitions]frontend.Variable, rep),
@@ -315,7 +315,7 @@ func NewKeccak256Circuit(logPerm int) keccak256Circuit {
 }
 
 func main() {
-	for _, logPerm := range []int{6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18} {
+	for _, logPerm := range []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 14 /*, 15, 16*/} {
 		circuit := NewKeccak256Circuit(logPerm)
 		result, err := ecgo.Compile(m31.ScalarField, &circuit)
 		if err != nil {

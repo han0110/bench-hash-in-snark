@@ -35,8 +35,16 @@ impl<C: ExpanderCircuit> HashInSnark for Expander<C> {
         Self: Sized,
     {
         let current_num_threads = current_num_threads();
-        let num_permutations = (num_permutations / current_num_threads).next_power_of_two();
-        let circuit_path = format!("{}/{}.txt", C::CIRCUIT_DIR, num_permutations.ilog2());
+        let log_permutations_per_thread = (num_permutations / current_num_threads)
+            .next_power_of_two()
+            .ilog2();
+        let num_permutations = current_num_threads << log_permutations_per_thread;
+        let log_packing_size = C::Config::get_field_pack_size().ilog2();
+        let circuit_path = format!(
+            "{}/{}.txt",
+            C::CIRCUIT_DIR,
+            log_permutations_per_thread - log_packing_size
+        );
         let circuit = Circuit::load_circuit(&circuit_path);
         let config = Config::new(C::scheme(), Default::default());
         let provers = repeat_with(|| {
