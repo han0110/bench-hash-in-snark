@@ -6,7 +6,7 @@ fn bench_blake2s(c: &mut Criterion) {
     let mut group = c.benchmark_group("blake2s");
 
     type H = StwoBlake2s;
-    bench::<H>(&mut group, "m31_blake2s_mt", po2(15..18));
+    bench::<H>(&mut group, "m31_blake2s_mt", po2(10..13));
 }
 
 fn bench_m31_poseidon2(c: &mut Criterion) {

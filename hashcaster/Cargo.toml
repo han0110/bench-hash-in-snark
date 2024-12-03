@@ -30,6 +30,7 @@ serde = { version = "1.0.215", features = ["derive"] }
 
 [profile.release]
 lto = "fat"
+codegen-units = 1
 
 [[bench]]
 name = "hashcaster"

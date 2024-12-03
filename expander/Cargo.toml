@@ -1,0 +1,22 @@
+[package]
+name = "bench-expander"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bench = { path = "../bench" }
+bincode = "1.3"
+clap = { version = "4.5.21", features = ["derive"] }
+criterion = "0.5.1"
+rand = "0.8.5"
+
+expander_arith = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "arith" }
+expander_circuit = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "circuit" }
+expander_config = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "config" }
+expander_gkr = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "gkr" }
+expander_transcript = { git = "https://github.com/PolyhedraZK/Expander", rev = "64145bd", package = "transcript" }
+rayon = "1"
+
+[[bench]]
+name = "expander"
+harness = false

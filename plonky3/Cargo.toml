@@ -34,6 +34,7 @@ p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
 
 [profile.release]
 lto = "fat"
+codegen-units = 1
 
 [[bench]]
 name = "plonky3"

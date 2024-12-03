@@ -2,6 +2,7 @@ import sys
 
 package_hashes = [
     ("binius", ["groestl", "keccak"]),
+    ("expander", ["keccak", "poseidon"]),
     ("hashcaster", ["keccak"]),
     ("plonky3", ["blake3", "keccak", "poseidon2"]),
     ("stwo", ["blake2s", "poseidon2"]),
@@ -25,9 +26,10 @@ for package, hashes in package_hashes:
         for log_permutations in range(10, 21):
             try:
                 path = f"{package}/report/t{num_threads}_{hash}_lp{log_permutations}"
-                report = [
-                    line.strip().split(": ")[1] for line in open(path).readlines()
-                ]
+                lines = open(path).readlines()
+                if len(lines) != 4:
+                    raise Exception
+                report = [line.strip().split(": ")[1] for line in lines]
             except Exception:
                 report = ["-", "-", "-", "-"]
             rows.append((hash, log_permutations, *report))

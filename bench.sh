@@ -1,14 +1,16 @@
 #!/bin/sh
 
 measure_peak_memory() {
-    AWK_SCRIPT='function human_size(x) {
-        if (x<1000) {return x " B"} else {x/=1024}
-        s="MGTEPZY";
-        while (x>=1000 && length(s)>1)
-            {x/=1024; s=substr(s,2)}
-        return int(x+0.5) " " substr(s,1,1) "B"
-    } {sub(/^[0-9]+/, human_size($1)); print}'
-    $(which time) -f '%M' "$@" 2>&1 | awk "$AWK_SCRIPT"
+    OS=$(uname -s)
+
+    if [ $OS = 'Darwin' ]; then V='B '; fi
+    AWK_SCRIPT="{ split(\"${V}KB MB GB TB\", v); s=1; while(\$1>1024 && s<9) { \$1/=1024; s++ } printf \"%.2f %s\", \$1, v[s] }"
+
+    if [ $OS = 'Darwin' ]; then
+        $(which time) -l "$@" 2>&1 | grep 'maximum resident set size' | grep -E -o '[0-9]+' | awk "$AWK_SCRIPT"
+    else
+        $(which time) -f '%M' "$@" 2>&1 | grep -E -o '^[0-9]+' | awk "$AWK_SCRIPT"
+    fi
 }
 
 PACKAGE=$1
@@ -26,5 +28,5 @@ mkdir -p report
 $RUN --sample-size 10 > $OUTPUT
 
 # Measure peak memory
-echo -n "  peak mem: " >> $OUTPUT
+printf '%s' '  peak mem: ' >> $OUTPUT
 measure_peak_memory $RUN >> $OUTPUT

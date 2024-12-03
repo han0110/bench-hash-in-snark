@@ -22,6 +22,7 @@ groestl_crypto = { package = "groestl", version = "0.10.1" }
 
 [profile.release]
 lto = "fat"
+codegen-units = 1
 
 [[bench]]
 name = "binius"
