@@ -176,6 +176,7 @@ dependencies = [
 name = "bench-expander"
 version = "0.1.0"
 dependencies = [
+ "arith",
  "bench",
  "bincode",
  "circuit",
@@ -184,6 +185,7 @@ dependencies = [
  "criterion",
  "gkr",
  "rand",
+ "transcript",
 ]
 
 [[package]]
