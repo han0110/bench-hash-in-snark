@@ -13,10 +13,10 @@ fn bench_keccak(c: &mut Criterion) {
 }
 
 fn bench_poseidon(c: &mut Criterion) {
-    let mut group = c.benchmark_group("poseidon");
+    let mut group = c.benchmark_group("m31_poseidon");
 
     type H = Expander<M31Poseidon>;
-    bench::<H>(&mut group, "raw", po2(10..13));
+    bench::<H>(&mut group, "raw", po2(15..18));
 }
 
 criterion_group!(
