@@ -315,7 +315,7 @@ func NewKeccak256Circuit(logPerm int) keccak256Circuit {
 }
 
 func main() {
-	for _, logPerm := range []int{10, 11, 12, 13, 14, 15, 16, 17, 18} {
+	for _, logPerm := range []int{6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18} {
 		circuit := NewKeccak256Circuit(logPerm)
 		result, err := ecgo.Compile(m31.ScalarField, &circuit)
 		if err != nil {

@@ -43,7 +43,7 @@ func NewM31PoseidonCircuit(logPerm int) M31PoseidonCircuit {
 }
 
 func main() {
-	for _, logPerm := range []int{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20} {
+	for _, logPerm := range []int{6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20} {
 		circuit := NewM31PoseidonCircuit(logPerm)
 		result, err := ecgo.Compile(m31.ScalarField, &circuit, frontend.WithCompressThreshold(32))
 		if err != nil {
