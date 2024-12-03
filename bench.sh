@@ -3,10 +3,10 @@
 measure_peak_memory() {
     OS=$(uname -s)
 
-    if [ $OS == 'Darwin' ]; then V='B '; fi
+    if [ $OS = 'Darwin' ]; then V='B '; fi
     AWK_SCRIPT="{ split(\"${V}KB MB GB TB\", v); s=1; while(\$1>1024 && s<9) { \$1/=1024; s++ } printf \"%.2f %s\", \$1, v[s] }"
 
-    if [ $OS == 'Darwin' ]; then
+    if [ $OS = 'Darwin' ]; then
         $(which time) -l "$@" 2>&1 | grep 'maximum resident set size' | sed 's/^[ \t]*//' | cut -d' ' -f1 | awk "$AWK_SCRIPT"
     else
         $(which time) -f '%M' "$@" 2>&1 | awk "$AWK_SCRIPT"
