@@ -1,4 +1,5 @@
 use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
+use bench::util::pcs_log_inv_rate;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -39,8 +40,8 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
         let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
         let dft = Dft::default();
         // TODO: Calculate precise minimum #queries to reach 128-bits provable security.
-        let log_blowup = 1;
-        let num_queries = 256;
+        let log_blowup = pcs_log_inv_rate();
+        let num_queries = 256 / log_blowup;
         let fri_config = FriConfig {
             log_blowup,
             num_queries,

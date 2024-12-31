@@ -1,4 +1,11 @@
-use std::time::Duration;
+use std::{env, time::Duration};
+
+pub fn pcs_log_inv_rate() -> usize {
+    env::var("PCS_LOG_INV_RATE")
+        .ok()
+        .and_then(|r| r.parse().ok())
+        .unwrap_or(1)
+}
 
 pub fn po2(exps: impl IntoIterator<Item = usize>) -> impl Iterator<Item = usize> {
     exps.into_iter().map(|exp| 1 << exp)

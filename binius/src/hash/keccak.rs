@@ -1,6 +1,6 @@
 // Copied and modified from https://github.com/IrreducibleOSS/binius/blob/main/examples/keccakf_circuit.rs.
 
-use bench::HashInSnark;
+use bench::{util::pcs_log_inv_rate, HashInSnark};
 use binius_circuits::{builder::ConstraintSystemBuilder, unconstrained::unconstrained};
 use binius_core::{
     constraint_system::{self, error::Error, Proof},
@@ -37,7 +37,7 @@ impl HashInSnark for BiniusKeccak {
         let num_permutations = num_permutations.next_power_of_two();
         Self {
             num_permutations,
-            log_inv_rate: 1,
+            log_inv_rate: pcs_log_inv_rate(),
             security_bits: 100,
         }
     }

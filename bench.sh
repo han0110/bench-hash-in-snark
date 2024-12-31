@@ -18,6 +18,8 @@ HASH=$2
 LOG_PERMUTATIONS=$3
 
 export RAYON_NUM_THREADS=${RAYON_NUM_THREADS:=4}
+export PCS_LOG_INV_RATE=${PCS_LOG_INV_RATE:=1}
+
 RUN="cargo --quiet run --release -- --hash $HASH --log-permutations $LOG_PERMUTATIONS"
 OUTPUT="report/t${RAYON_NUM_THREADS}_${HASH}_lp${LOG_PERMUTATIONS}"
 
