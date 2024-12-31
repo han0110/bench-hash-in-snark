@@ -2,6 +2,8 @@ use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
 use bench::HashInSnark;
 use p3_uni_stark::{prove, verify, PcsError, Proof, VerificationError};
 use rand::RngCore;
+use tracing_forest::{util::LevelFilter, ForestLayer};
+use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
 pub mod circuit;
 pub mod config;
@@ -67,4 +69,14 @@ where
     fn deserialize_proof(bytes: &[u8]) -> Self::Proof {
         bincode::deserialize(bytes).unwrap()
     }
+}
+
+pub fn setup_trace() {
+    let env_filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy();
+    Registry::default()
+        .with(env_filter)
+        .with(ForestLayer::default())
+        .init();
 }

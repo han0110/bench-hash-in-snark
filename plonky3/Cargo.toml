@@ -32,6 +32,9 @@ p3-poseidon2-air = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0"
 p3-symmetric = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
 p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "abdc2a0" }
 
+tracing-subscriber = { version = "0.3.17", features = ["std", "env-filter"] }
+tracing-forest = { version = "0.1.6", features = ["smallvec"] }
+
 [profile.release]
 lto = "fat"
 codegen-units = 1

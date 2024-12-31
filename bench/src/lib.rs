@@ -100,12 +100,14 @@ pub fn bench<H: HashInSnark>(
     (num_permutations, time, throughput, proof_size)
 }
 
+pub fn noop() {}
+
 #[macro_export]
 macro_rules! main {
-    ($($variant:ident => $snark:ty,)*) => {
+    (setup_trace = $setup_trace:path; hash = { $($variant:ident => $snark:ty),+ $(,)? };) => {
         #[derive(Clone, Debug, clap::ValueEnum)]
         enum Hash {
-            $($variant,)*
+            $($variant),+
         }
 
         #[derive(Clone, Debug, clap::Parser)]
@@ -117,21 +119,27 @@ macro_rules! main {
             log_permutations: usize,
             #[arg(long)]
             sample_size: Option<usize>,
+            #[arg(long, default_value_t = false)]
+            trace: bool
         }
 
         fn main() {
             let args: Args = clap::Parser::parse();
 
+            if args.trace {
+                $setup_trace();
+            }
+
             let Some(sample_size) = args.sample_size else {
                 match args.hash {
-                    $(Hash::$variant => $crate::run::<$snark>(1 << args.log_permutations),)*
+                    $(Hash::$variant => $crate::run::<$snark>(1 << args.log_permutations)),+
                 }
                 return;
             };
 
             let num_permutations = 1 << args.log_permutations;
             let (_, time, throughput, proof_size) = match args.hash {
-                $(Hash::$variant => $crate::bench::<$snark>(num_permutations, sample_size),)*
+                $(Hash::$variant => $crate::bench::<$snark>(num_permutations, sample_size)),+
             };
             println!(
                 "      time: {}\nthroughput: {}\nproof size: {}",
@@ -141,4 +149,10 @@ macro_rules! main {
             );
         }
     };
+    ($($variant:ident => $snark:ty),+ $(,)?) => {
+        main!(
+            setup_trace = $crate::noop;
+            hash = { $($variant => $snark),+ };
+        );
+    }
 }

@@ -17,6 +17,7 @@ binius_hal = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc"
 binius_hash = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
 binius_macros = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
 binius_math = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc" }
+binius_utils = { git = "https://github.com/IrreducibleOSS/binius", rev = "9791abc", features = ["tracing"] }
 bumpalo = { version = "3.16.0", features = ["collections"] }
 groestl_crypto = { package = "groestl", version = "0.10.1" }
 
@@ -27,3 +28,6 @@ codegen-units = 1
 [[bench]]
 name = "binius"
 harness = false
+
+[patch."https://gitlab.com/IrreducibleOSS/tracing-profile.git"]
+tracing-profile = { git = "https://gitlab.com/IrreducibleOSS//tracing-profile.git", rev = "6d986ca1" }
