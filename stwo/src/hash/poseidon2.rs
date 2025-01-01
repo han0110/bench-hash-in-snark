@@ -1,4 +1,4 @@
-use bench::HashInSnark;
+use bench::{util::pcs_log_inv_rate, HashInSnark};
 use rand::RngCore;
 use stwo_prover::{
     constraint_framework::TraceLocationAllocator,
@@ -38,9 +38,11 @@ impl HashInSnark for StwoPoseidon2 {
         let num_permutations = (num_permutations >> N_LOG_INSTANCES_PER_ROW).next_power_of_two()
             << N_LOG_INSTANCES_PER_ROW;
 
+        let log_blowup_factor = pcs_log_inv_rate() as _;
+        let num_queries = 256;
         let config = PcsConfig {
             pow_bits: 0,
-            fri_config: FriConfig::new(0, 1, 256),
+            fri_config: FriConfig::new(0, log_blowup_factor, num_queries),
         };
 
         Self {

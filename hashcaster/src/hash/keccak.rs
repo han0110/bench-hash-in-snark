@@ -4,7 +4,7 @@ use crate::util::{
     deserialize_packed, serialize_packed, BatchFRIPCS128, Error, F128Challenger, FriPcsProof,
     SumcheckError, SumcheckProof,
 };
-use bench::HashInSnark;
+use bench::{util::pcs_log_inv_rate, HashInSnark};
 use binius_core::tower::{AESTowerFamily, TowerFamily};
 use binius_field::{arch::OptimalUnderlier, PackedField};
 use binius_hash::{Groestl256, GroestlDigest, GroestlDigestCompression};
@@ -76,7 +76,7 @@ impl HashInSnark for HashcasterKeccak {
     {
         let num_permutations = num_permutations.next_power_of_two();
         let security_bits = 100;
-        let log_inv_rate = 1;
+        let log_inv_rate = pcs_log_inv_rate();
         let num_vars = num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS;
         let pcs = BatchFRIPCS128::new(security_bits, log_inv_rate, num_vars, 5);
         Self {
