@@ -26,11 +26,11 @@ impl HashInSnark for StwoBlake2s {
     {
         let num_permutations = num_permutations.next_power_of_two();
 
-        let log_blowup_factor = pcs_log_inv_rate() as _;
-        let num_queries = 256;
+        let log_blowup_factor = pcs_log_inv_rate();
+        let num_queries = usize::div_ceil(256, log_blowup_factor);
         let config = PcsConfig {
             pow_bits: 0,
-            fri_config: FriConfig::new(0, log_blowup_factor, num_queries),
+            fri_config: FriConfig::new(0, log_blowup_factor as _, num_queries),
         };
 
         Self {

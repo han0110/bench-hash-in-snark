@@ -39,10 +39,10 @@ impl HashInSnark for StwoPoseidon2 {
             << N_LOG_INSTANCES_PER_ROW;
 
         let log_blowup_factor = pcs_log_inv_rate() as _;
-        let num_queries = 256;
+        let num_queries = usize::div_ceil(256, log_blowup_factor);
         let config = PcsConfig {
             pow_bits: 0,
-            fri_config: FriConfig::new(0, log_blowup_factor, num_queries),
+            fri_config: FriConfig::new(0, log_blowup_factor as _, num_queries),
         };
 
         Self {
