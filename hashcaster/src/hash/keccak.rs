@@ -29,8 +29,9 @@ use num_traits::{One, Zero};
 use p3_challenger::{CanObserve, CanSample};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
-const NUM_VARS_PER_PERMUTATIONS: usize = 10 + 3 - 7;
+const NUM_VARS_PER_PERMUTATIONS: usize = 2;
 const BOOL_CHECK_C: usize = 5;
 const LIN_CHECK_NUM_VARS: usize = 10;
 
@@ -57,12 +58,10 @@ pub struct HashcasterKeccakProof {
         serialize_with = "serialize_packed",
         deserialize_with = "deserialize_packed"
     )]
-    layer0_comm: GroestlDigest<<Tower as TowerFamily>::B8>,
-    layer2_claims: [F128; 5],
-    bool_check_proof: SumcheckProof,
-    multi_open_proof: SumcheckProof,
-    lin_check_proof: SumcheckProof,
-    layer0_open_proof: FriPcsProof,
+    input_comm: GroestlDigest<<Tower as TowerFamily>::B8>,
+    initial_claims: [F128; 5],
+    rounds: [(SumcheckProof, SumcheckProof, SumcheckProof); 24],
+    input_open_proof: FriPcsProof,
 }
 
 impl HashInSnark for HashcasterKeccak {
@@ -74,10 +73,10 @@ impl HashInSnark for HashcasterKeccak {
     where
         Self: Sized,
     {
-        let num_permutations = num_permutations.next_power_of_two();
+        let num_vars = (num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS).max(10);
+        let num_permutations = 3 << (num_vars - 3);
         let security_bits = 100;
         let log_inv_rate = pcs_log_inv_rate();
-        let num_vars = num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS;
         let pcs = BatchFRIPCS128::new(security_bits, log_inv_rate, num_vars, 5);
         Self {
             num_permutations,
@@ -97,39 +96,57 @@ impl HashInSnark for HashcasterKeccak {
     fn prove(&self, input: Self::Input) -> Self::Proof {
         let mut challenger = F128Challenger::keccak256();
 
-        let layer0 = input;
-        let layer1 = keccak_linround_witness(layer0.each_ref().map(|poly| poly.as_slice()));
-        let layer2 = chi_round_witness(&layer1);
+        // TODO: Add deferred iota to linear layer.
+        let layers = (0..24usize).fold(vec![input], |mut layers, _| {
+            let last = layers.last().unwrap();
+            let lin = keccak_linround_witness(last.each_ref().map(Vec::as_slice));
+            let chi = chi_round_witness(&lin);
+            layers.extend([lin, chi]);
+            layers
+        });
 
-        let (layer0_packed, layer0_comm, layer0_committed) = self.pcs.commit(&layer0);
+        let (input_packed, input_comm, input_committed) = self.pcs.commit(&layers[0]);
 
-        layer0_comm
+        input_comm
             .iter()
             .for_each(|scalar| challenger.observe(scalar));
 
-        let layer2_point = challenger.sample_vec(self.num_vars());
-        let layer2_claims: [F128; 5] = layer2.each_ref().map(|poly| evaluate(poly, &layer2_point));
-        challenger.observe_slice(&layer2_claims);
+        let point = challenger.sample_vec(self.num_vars());
+        let initial_claims: [F128; 5] = layers[layers.len() - 1]
+            .each_ref()
+            .map(|poly| evaluate(poly, &point));
+        challenger.observe_slice(&initial_claims);
 
-        let (bool_check_proof, multi_open_proof, layer1_point) =
-            self.prove_layer2(&layer1, &layer2_point, &layer2_claims, &mut challenger);
+        let mut layers_rev = layers.iter().rev().skip(1);
+        let mut claims = initial_claims;
+        let mut point = point;
 
-        let (lin_check_proof, layer0_point) = {
-            let layer1_claims = multi_open_proof.evals.clone().try_into().unwrap();
-            self.prove_layer1(&layer0, &layer1_point, &layer1_claims, &mut challenger)
-        };
+        let rounds: [_; 24] = from_fn(|_| {
+            let (bool_check_proof, multi_open_proof, lin_check_proof);
 
-        let layer0_open_proof = self
-            .pcs
-            .open(&layer0_packed, &layer0_committed, &layer0_point);
+            (bool_check_proof, multi_open_proof, point) =
+                self.prove_chi(layers_rev.next().unwrap(), &point, &claims, &mut challenger);
+            claims = multi_open_proof.evals.clone().try_into().unwrap();
+
+            (lin_check_proof, point) = self.prove_lin(
+                KeccakLinMatrix::new(),
+                layers_rev.next().unwrap(),
+                &point,
+                &claims,
+                &mut challenger,
+            );
+            claims = lin_check_proof.evals.clone().try_into().unwrap();
+
+            (bool_check_proof, multi_open_proof, lin_check_proof)
+        });
+
+        let input_open_proof = self.pcs.open(&input_packed, &input_committed, &point);
 
         HashcasterKeccakProof {
-            layer0_comm,
-            layer2_claims,
-            bool_check_proof,
-            multi_open_proof,
-            lin_check_proof,
-            layer0_open_proof,
+            input_comm,
+            initial_claims,
+            rounds,
+            input_open_proof,
         }
     }
 
@@ -137,37 +154,38 @@ impl HashInSnark for HashcasterKeccak {
         let mut challenger = F128Challenger::keccak256();
 
         proof
-            .layer0_comm
+            .input_comm
             .iter()
             .for_each(|scalar| challenger.observe(scalar));
 
-        let layer2_point = challenger.sample_vec(self.num_vars());
-        challenger.observe_slice(&proof.layer2_claims);
+        let point = challenger.sample_vec(self.num_vars());
+        challenger.observe_slice(&proof.initial_claims);
 
-        let layer1_point = self.verify_layer2(
-            &layer2_point,
-            &proof.layer2_claims,
-            &proof.bool_check_proof,
-            &proof.multi_open_proof,
-            &mut challenger,
-        )?;
+        let mut claims = proof.initial_claims;
+        let mut point = point;
 
-        let layer0_point = {
-            let layer1_claims = proof.multi_open_proof.evals.clone().try_into().unwrap();
-            self.verify_layer1(
-                &layer1_point,
-                &layer1_claims,
-                &proof.lin_check_proof,
+        for (bool_check_proof, multi_open_proof, lin_check_proof) in &proof.rounds {
+            point = self.verify_chi(
+                &point,
+                &claims,
+                bool_check_proof,
+                multi_open_proof,
                 &mut challenger,
-            )?
-        };
+            )?;
+            claims = multi_open_proof.evals.clone().try_into().unwrap();
 
-        self.pcs.verify(
-            &proof.layer0_comm,
-            &proof.layer0_open_proof,
-            &layer0_point,
-            &proof.lin_check_proof.evals,
-        )
+            point = self.verify_lin(
+                KeccakLinMatrix::new(),
+                &point,
+                &claims,
+                lin_check_proof,
+                &mut challenger,
+            )?;
+            claims = lin_check_proof.evals.clone().try_into().unwrap();
+        }
+
+        self.pcs
+            .verify(&proof.input_comm, &proof.input_open_proof, &point, &claims)
     }
 
     fn serialize_proof(proof: &Self::Proof) -> Vec<u8> {
@@ -184,18 +202,21 @@ impl HashcasterKeccak {
         self.num_permutations.ilog2() as usize + NUM_VARS_PER_PERMUTATIONS
     }
 
-    fn prove_layer2(
+    fn prove_chi(
         &self,
-        layer1: &[Vec<F128>; 5],
+        input: &[Vec<F128>; 5],
         point: &[F128],
         claims: &[F128; 5],
         challenger: &mut F128Challenger,
     ) -> (SumcheckProof, SumcheckProof, Vec<F128>) {
-        let (bool_check_proof, multi_open_point) = {
+        let (bool_check_proof, multi_open_proof);
+        let mut point = Cow::Borrowed(point);
+
+        (bool_check_proof, point) = {
             let f = ChiPackage {};
             let gamma = challenger.sample();
 
-            let prover = BoolCheck::new(f, layer1.clone(), BOOL_CHECK_C, *claims, point.to_vec());
+            let prover = BoolCheck::new(f, input.clone(), BOOL_CHECK_C, *claims, point.to_vec());
             let mut prover = prover.folding_challenge(gamma);
 
             let mut claim = evaluate_univar(claims, gamma);
@@ -218,17 +239,17 @@ impl HashcasterKeccak {
 
             challenger.observe_slice(&evals);
 
-            (SumcheckProof { round_polys, evals }, rs)
+            (SumcheckProof { round_polys, evals }, rs.into())
         };
 
-        let (multi_open_proof, layer1_point) = {
+        (multi_open_proof, point) = {
             let gamma = challenger.sample();
 
-            let multi_open_claims = bool_check_proof.evals.clone();
-            let prover = MulticlaimCheck::new(layer1, multi_open_point.clone(), multi_open_claims);
+            let claims = &bool_check_proof.evals;
+            let prover = MulticlaimCheck::new(input, point.to_vec(), claims.clone());
             let mut prover = prover.folding_challenge(gamma);
 
-            let mut claim = evaluate_univar(&bool_check_proof.evals, gamma);
+            let mut claim = evaluate_univar(claims, gamma);
             let mut round_polys = vec![];
             let mut rs = vec![];
             for _ in 0..self.num_vars() {
@@ -248,24 +269,24 @@ impl HashcasterKeccak {
 
             challenger.observe_slice(&evals);
 
-            (SumcheckProof { round_polys, evals }, rs)
+            (SumcheckProof { round_polys, evals }, rs.into())
         };
 
-        (bool_check_proof, multi_open_proof, layer1_point)
+        (bool_check_proof, multi_open_proof, point.into())
     }
 
-    fn prove_layer1(
+    fn prove_lin(
         &self,
-        layer0: &[Vec<F128>; 5],
+        matrix: impl LinOp,
+        input: &[Vec<F128>; 5],
         point: &[F128],
         claims: &[F128; 5],
         challenger: &mut F128Challenger,
     ) -> (SumcheckProof, Vec<F128>) {
-        let matrix = KeccakLinMatrix::new();
         let gamma = challenger.sample();
 
         let prover = Lincheck::new(
-            layer0.clone(),
+            input.clone(),
             point.to_vec(),
             matrix,
             LIN_CHECK_NUM_VARS,
@@ -299,7 +320,7 @@ impl HashcasterKeccak {
         )
     }
 
-    fn verify_layer2(
+    fn verify_chi(
         &self,
         point: &[F128],
         claims: &[F128; 5],
@@ -312,7 +333,9 @@ impl HashcasterKeccak {
         assert_eq!(bool_check_proof.evals.len(), 128 * 5);
         assert_eq!(multi_open_proof.evals.len(), 5);
 
-        let multi_open_point = {
+        let mut point = Cow::Borrowed(point);
+
+        point = {
             let f = ChiPackage {};
             let gamma = challenger.sample();
 
@@ -339,12 +362,12 @@ impl HashcasterKeccak {
             let claimed_ev = f.exec_alg(&coord_evals, 0, 1)[0];
 
             let folded_claimed_ev = evaluate_univar(&claimed_ev, gamma);
-            (folded_claimed_ev * eq_ev(point, &rs) == claim)
-                .then_some(rs)
+            (folded_claimed_ev * eq_ev(&point, &rs) == claim)
+                .then(|| rs.into())
                 .ok_or_else(|| SumcheckError::UnmatchedSubclaim("BoolCheck".to_string()))?
         };
 
-        let layer1_point = {
+        point = {
             let gamma = challenger.sample();
 
             let mut claim = evaluate_univar(&bool_check_proof.evals, gamma);
@@ -366,7 +389,7 @@ impl HashcasterKeccak {
 
             let mut pt_inv_orbit = vec![];
 
-            let mut tmp = multi_open_point.clone();
+            let mut tmp = point.to_vec();
             for _ in 0..128 {
                 tmp.iter_mut().for_each(|x| *x *= *x);
                 pt_inv_orbit.push(tmp.clone())
@@ -384,15 +407,16 @@ impl HashcasterKeccak {
             let eval = evaluate_univar(evals, gamma128);
 
             (eval * eq_ev == claim)
-                .then_some(rs)
+                .then(|| rs.into())
                 .ok_or_else(|| SumcheckError::UnmatchedSubclaim("MulticlaimCheck".to_string()))?
         };
 
-        Ok(layer1_point)
+        Ok(point.into())
     }
 
-    fn verify_layer1(
+    fn verify_lin(
         &self,
+        matrix: impl LinOp,
         point: &[F128],
         claims: &[F128; 5],
         lin_check_proof: &SumcheckProof,
@@ -430,9 +454,8 @@ impl HashcasterKeccak {
             mult *= gamma;
         }
 
-        let m = KeccakLinMatrix::new();
         let mut target = vec![F128::zero(); 5 * (1 << LIN_CHECK_NUM_VARS)];
-        m.apply_transposed(&adj_eq_vec, &mut target);
+        matrix.apply_transposed(&adj_eq_vec, &mut target);
 
         let mut eq_evals = vec![];
         for i in 0..5 {
