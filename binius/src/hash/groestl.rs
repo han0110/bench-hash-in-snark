@@ -7,15 +7,14 @@ use binius_core::{
     fiat_shamir::HasherChallenger,
     tower::AESTowerFamily,
 };
-use binius_field::{arch::OptimalUnderlier, AESTowerField128b, AESTowerField16b, AESTowerField8b};
+use binius_field::{arch::OptimalUnderlier, AESTowerField128b, BinaryField8b};
 use binius_hal::make_portable_backend;
-use binius_hash::{Groestl256, GroestlDigestCompression};
-use binius_math::DefaultEvaluationDomainFactory;
+use binius_hash::compress::Groestl256ByteCompression;
+use binius_math::IsomorphicEvaluationDomainFactory;
+use groestl_crypto::Groestl256;
 use rand::RngCore;
 
 type U = OptimalUnderlier;
-
-const LOG_ROWS_PER_PERMUTATION: usize = 0;
 
 pub struct BiniusGroestl {
     num_permutations: usize,
@@ -48,11 +47,8 @@ impl HashInSnark for BiniusGroestl {
 
     fn prove(&self, _: Self::Input) -> Self::Proof {
         let allocator = bumpalo::Bump::new();
-        let mut builder =
-            ConstraintSystemBuilder::<U, AESTowerField128b, AESTowerField16b>::new_with_witness(
-                &allocator,
-            );
-        let log_size = self.num_permutations.ilog2() as usize + LOG_ROWS_PER_PERMUTATION;
+        let mut builder = ConstraintSystemBuilder::new_with_witness(&allocator);
+        let log_size = self.num_permutations.ilog2() as usize;
         binius_circuits::groestl::groestl_p_permutation(&mut builder, log_size).unwrap();
         let witness = builder.take_witness().unwrap();
         let constraint_system = builder.build().unwrap();
@@ -60,42 +56,37 @@ impl HashInSnark for BiniusGroestl {
             U,
             AESTowerFamily,
             _,
-            _,
-            _,
-            Groestl256<AESTowerField128b, _>,
-            GroestlDigestCompression<AESTowerField8b>,
-            HasherChallenger<groestl_crypto::Groestl256>,
+            Groestl256,
+            Groestl256ByteCompression,
+            HasherChallenger<Groestl256>,
             _,
         >(
             &constraint_system,
             self.log_inv_rate,
             self.security_bits,
             witness,
-            &DefaultEvaluationDomainFactory::default(),
+            &IsomorphicEvaluationDomainFactory::<BinaryField8b>::default(),
             &make_portable_backend(),
         )
         .unwrap()
     }
 
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
-        let mut builder = ConstraintSystemBuilder::<U, AESTowerField128b, AESTowerField16b>::new();
-        let log_n_permutations = self.num_permutations.ilog2() as usize;
-        let log_size = log_n_permutations + LOG_ROWS_PER_PERMUTATION;
+        let mut builder = ConstraintSystemBuilder::<U, AESTowerField128b>::new();
+        let log_size = self.num_permutations.ilog2() as usize;
         binius_circuits::groestl::groestl_p_permutation(&mut builder, log_size).unwrap();
         let constraint_system = builder.build().unwrap();
         constraint_system::verify::<
             U,
             AESTowerFamily,
-            _,
-            _,
-            Groestl256<AESTowerField128b, _>,
-            GroestlDigestCompression<AESTowerField8b>,
-            HasherChallenger<groestl_crypto::Groestl256>,
+            Groestl256,
+            Groestl256ByteCompression,
+            HasherChallenger<Groestl256>,
         >(
             &constraint_system.no_base_constraints(),
             self.log_inv_rate,
             self.security_bits,
-            &DefaultEvaluationDomainFactory::default(),
+            vec![],
             proof.clone(),
         )
     }

@@ -1,23 +1,20 @@
 // Copied and modified from https://github.com/IrreducibleOSS/binius/blob/main/examples/keccakf_circuit.rs.
 
 use bench::{util::pcs_log_inv_rate, HashInSnark};
-use binius_circuits::{builder::ConstraintSystemBuilder, unconstrained::unconstrained};
+use binius_circuits::builder::ConstraintSystemBuilder;
 use binius_core::{
     constraint_system::{self, error::Error, Proof},
     fiat_shamir::HasherChallenger,
     tower::CanonicalTowerFamily,
 };
-use binius_field::{arch::OptimalUnderlier, BinaryField128b, BinaryField1b, BinaryField8b};
+use binius_field::arch::OptimalUnderlier;
 use binius_hal::make_portable_backend;
-use binius_hash::{GroestlDigestCompression, GroestlHasher};
+use binius_hash::compress::Groestl256ByteCompression;
 use binius_math::DefaultEvaluationDomainFactory;
-use core::array;
 use groestl_crypto::Groestl256;
 use rand::RngCore;
 
 type U = OptimalUnderlier;
-
-const LOG_ROWS_PER_PERMUTATION: usize = 6;
 
 pub struct BiniusKeccak {
     num_permutations: usize,
@@ -50,25 +47,17 @@ impl HashInSnark for BiniusKeccak {
 
     fn prove(&self, _: Self::Input) -> Self::Proof {
         let allocator = bumpalo::Bump::new();
-        let mut builder =
-            ConstraintSystemBuilder::<U, BinaryField128b, BinaryField8b>::new_with_witness(
-                &allocator,
-            );
-        let log_size = self.num_permutations.ilog2() as usize + LOG_ROWS_PER_PERMUTATION;
-        let input = array::from_fn(|_| {
-            unconstrained::<_, _, _, BinaryField1b>(&mut builder, "input", log_size).unwrap()
-        });
-        binius_circuits::keccakf::keccakf(&mut builder, input, log_size).unwrap();
+        let mut builder = ConstraintSystemBuilder::new_with_witness(&allocator);
+        let log_size = self.num_permutations.ilog2() as usize;
+        binius_circuits::keccakf::keccakf(&mut builder, Some(vec![]), log_size).unwrap();
         let witness = builder.take_witness().unwrap();
         let constraint_system = builder.build().unwrap();
         constraint_system::prove::<
             U,
             CanonicalTowerFamily,
             _,
-            _,
-            _,
-            GroestlHasher<BinaryField128b>,
-            GroestlDigestCompression<BinaryField8b>,
+            Groestl256,
+            Groestl256ByteCompression,
             HasherChallenger<Groestl256>,
             _,
         >(
@@ -83,27 +72,21 @@ impl HashInSnark for BiniusKeccak {
     }
 
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
-        let mut builder = ConstraintSystemBuilder::<U, BinaryField128b, BinaryField8b>::new();
-        let log_n_permutations = self.num_permutations.ilog2() as usize;
-        let log_size = log_n_permutations + LOG_ROWS_PER_PERMUTATION;
-        let input = array::from_fn(|_| {
-            unconstrained::<_, _, _, BinaryField1b>(&mut builder, "input", log_size).unwrap()
-        });
-        binius_circuits::keccakf::keccakf(&mut builder, input, log_size).unwrap();
+        let mut builder = ConstraintSystemBuilder::<U, _>::new();
+        let log_size = self.num_permutations.ilog2() as usize;
+        binius_circuits::keccakf::keccakf(&mut builder, None::<[_; 0]>, log_size).unwrap();
         let constraint_system = builder.build().unwrap();
         constraint_system::verify::<
             U,
             CanonicalTowerFamily,
-            _,
-            _,
-            GroestlHasher<BinaryField128b>,
-            GroestlDigestCompression<BinaryField8b>,
+            Groestl256,
+            Groestl256ByteCompression,
             HasherChallenger<Groestl256>,
         >(
             &constraint_system.no_base_constraints(),
             self.log_inv_rate,
             self.security_bits,
-            &DefaultEvaluationDomainFactory::default(),
+            vec![],
             proof.clone(),
         )
     }

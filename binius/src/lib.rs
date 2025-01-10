@@ -1,4 +1,4 @@
-use binius_utils::tracing::init_tracing;
+use tracing_profile::init_tracing;
 
 pub mod hash;
 
