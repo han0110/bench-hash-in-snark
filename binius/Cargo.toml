@@ -10,14 +10,14 @@ clap = { version = "4.5.21", features = ["derive"] }
 criterion = "0.5.1"
 rand = "0.8.5"
 
-binius_circuits = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_core = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_field = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_hal = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_hash = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_macros = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_math = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
-binius_utils = { git = "https://github.com/IrreducibleOSS/binius", rev = "1f780fd" }
+binius_circuits = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_core = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_field = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_hal = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_hash = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_macros = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_math = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
+binius_utils = { git = "https://github.com/IrreducibleOSS/binius", rev = "22556b2" }
 bumpalo = { version = "3.16.0", features = ["collections"] }
 groestl_crypto = { package = "groestl", version = "0.10.1" }
 tracing-profile = "0.9.0"
