@@ -5,16 +5,17 @@ use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{ExtensionField, PrimeField32, TwoAdicField};
 use p3_fri::{FriConfig, TwoAdicFriPcs};
-use p3_keccak::Keccak256Hash;
+use p3_keccak::{Keccak256Hash, KeccakF, VECTOR_LEN};
 use p3_merkle_tree::MerkleTreeMmcs;
-use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
+use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
 use p3_uni_stark::{StarkConfig, StarkGenericConfig};
 
+pub type U64Hash = PaddingFreeSponge<KeccakF, 25, 17, 4>;
+pub type FieldHash = SerializingHasher32To64<U64Hash>;
+pub type Compress = CompressionFunctionFromHasher<U64Hash, 2, 4>;
+pub type ValMmcs<F> = MerkleTreeMmcs<[F; VECTOR_LEN], [u64; VECTOR_LEN], FieldHash, Compress, 4>;
+pub type ChallengeMmcs<F, E> = ExtensionMmcs<F, E, ValMmcs<F>>;
 pub type ByteHash = Keccak256Hash;
-pub type LeafHash = SerializingHasher32<ByteHash>;
-pub type Compression = CompressionFunctionFromHasher<ByteHash, 2, 32>;
-pub type ValMmcs<Val> = MerkleTreeMmcs<Val, u8, LeafHash, Compression, 32>;
-pub type ChallengeMmcs<Val, Challenge> = ExtensionMmcs<Val, Challenge, ValMmcs<Val>>;
 pub type Challenger<Val> = SerializingChallenger32<Val, HashChallenger<u8, ByteHash, 32>>;
 pub type Dft<Val> = Radix2DitParallel<Val>;
 pub type Pcs<Val, Challenge> =
@@ -33,10 +34,10 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
     where
         Self: Sized,
     {
-        let byte_hash = ByteHash {};
-        let leaf_hash = LeafHash::new(byte_hash);
-        let compress = Compression::new(byte_hash);
-        let val_mmcs = ValMmcs::new(leaf_hash, compress);
+        let u64_hash = U64Hash::new(KeccakF {});
+        let field_hash = FieldHash::new(u64_hash);
+        let compress = Compress::new(u64_hash);
+        let val_mmcs = ValMmcs::new(field_hash, compress);
         let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
         let dft = Dft::default();
         // TODO: Calculate precise minimum #queries to reach 128-bits provable security.
