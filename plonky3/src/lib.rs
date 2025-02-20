@@ -1,5 +1,5 @@
 use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
-use bench::HashInSnark;
+use bench::{util::pcs_log_inv_rate, HashInSnark};
 use p3_uni_stark::{prove, verify, PcsError, Proof, VerificationError};
 use rand::RngCore;
 use tracing_forest::{util::LevelFilter, ForestLayer};
@@ -26,8 +26,9 @@ where
     where
         Self: Sized,
     {
-        let circuit = Circuit::new(num_permutations);
-        let config = Config::new(&circuit);
+        let log_blowup = pcs_log_inv_rate();
+        let circuit = Circuit::new(num_permutations, log_blowup);
+        let config = Config::new(circuit.trace_height(), log_blowup);
         Self { config, circuit }
     }
 

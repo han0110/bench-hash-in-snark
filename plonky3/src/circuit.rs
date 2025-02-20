@@ -28,13 +28,13 @@ pub trait Plonky3Circuit<SC: StarkGenericConfig> {
         + for<'a> Air<VerifierConstraintFolder<'a, SC>>;
     type Input;
 
-    fn new(num_permutations: usize) -> Self
+    fn new(num_permutations: usize, log_blowup: usize) -> Self
     where
         Self: Sized;
 
     fn num_permutations(&self) -> usize;
 
-    fn trace_size(&self) -> usize;
+    fn trace_height(&self) -> usize;
 
     fn air(&self) -> &Self::Air;
 

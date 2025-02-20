@@ -3,8 +3,6 @@ use p3_field::extension::BinomialExtensionField;
 use p3_koala_bear::KoalaBear;
 use p3_uni_stark::StarkGenericConfig;
 
-use crate::circuit::Plonky3Circuit;
-
 mod keccak_mt;
 
 pub type BabyBearKeccakMtConfig =
@@ -15,7 +13,7 @@ pub type KoalaBearKeccakMtConfig =
 pub trait Plonky3Config {
     type StarkGenericConfig: StarkGenericConfig;
 
-    fn new(circuit: &impl Plonky3Circuit<Self::StarkGenericConfig>) -> Self
+    fn new(trace_height: usize, log_blowup: usize) -> Self
     where
         Self: Sized;
 

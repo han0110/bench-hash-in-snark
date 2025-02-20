@@ -29,6 +29,7 @@ pub struct KoalaBearPoseidon2Circuit {
     constants: RoundConstants<KoalaBear, WIDTH, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>,
     air: KoalaBearPoseidon2Air,
     num_permutations: usize,
+    log_blowup: usize,
 }
 
 impl<SC: StarkGenericConfig> Plonky3Circuit<SC> for KoalaBearPoseidon2Circuit
@@ -38,7 +39,7 @@ where
     type Air = KoalaBearPoseidon2Air;
     type Input = Vec<[KoalaBear; WIDTH]>;
 
-    fn new(num_permutations: usize) -> Self
+    fn new(num_permutations: usize, log_blowup: usize) -> Self
     where
         Self: Sized,
     {
@@ -49,6 +50,7 @@ where
             constants,
             air,
             num_permutations,
+            log_blowup,
         }
     }
 
@@ -56,7 +58,7 @@ where
         self.num_permutations
     }
 
-    fn trace_size(&self) -> usize {
+    fn trace_height(&self) -> usize {
         self.num_permutations / VECTOR_LEN
     }
 
@@ -80,6 +82,6 @@ where
             HALF_FULL_ROUNDS,
             PARTIAL_ROUNDS,
             VECTOR_LEN,
-        >(input, &self.constants)
+        >(input, &self.constants, self.log_blowup)
     }
 }

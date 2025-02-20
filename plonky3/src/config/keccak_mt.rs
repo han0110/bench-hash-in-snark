@@ -1,5 +1,4 @@
-use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
-use bench::util::pcs_log_inv_rate;
+use crate::config::Plonky3Config;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -30,7 +29,7 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
 {
     type StarkGenericConfig = StarkConfig<Pcs<Val, Challenge>, Challenge, Challenger<Val>>;
 
-    fn new(_: &impl Plonky3Circuit<Self::StarkGenericConfig>) -> Self
+    fn new(trace_height: usize, log_blowup: usize) -> Self
     where
         Self: Sized,
     {
@@ -41,10 +40,10 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
         let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
         let dft = Dft::default();
         // TODO: Calculate precise minimum #queries to reach 128-bits provable security.
-        let log_blowup = pcs_log_inv_rate();
         let num_queries = usize::div_ceil(256, log_blowup);
         let fri_config = FriConfig {
             log_blowup,
+            log_final_poly_len: trace_height.ilog2().saturating_sub(1).min(3) as _,
             num_queries,
             proof_of_work_bits: 0,
             mmcs: challenge_mmcs,

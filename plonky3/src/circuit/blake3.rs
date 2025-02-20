@@ -8,6 +8,7 @@ use rand::{Rng, RngCore};
 pub struct Blake3Circuit {
     air: Blake3Air,
     num_permutations: usize,
+    log_blowup: usize,
 }
 
 impl<SC: StarkGenericConfig> Plonky3Circuit<SC> for Blake3Circuit
@@ -17,13 +18,14 @@ where
     type Air = Blake3Air;
     type Input = Vec<[u32; 24]>;
 
-    fn new(num_permutations: usize) -> Self
+    fn new(num_permutations: usize, log_blowup: usize) -> Self
     where
         Self: Sized,
     {
         Self {
             air: Blake3Air {},
             num_permutations,
+            log_blowup,
         }
     }
 
@@ -31,7 +33,7 @@ where
         self.num_permutations
     }
 
-    fn trace_size(&self) -> usize {
+    fn trace_height(&self) -> usize {
         self.num_permutations.next_power_of_two()
     }
 
@@ -44,6 +46,6 @@ where
     }
 
     fn generate_trace(&self, input: Self::Input) -> RowMajorMatrix<Val<SC>> {
-        generate_trace_rows(input)
+        generate_trace_rows(input, self.log_blowup)
     }
 }
