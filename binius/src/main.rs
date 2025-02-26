@@ -1,13 +1,13 @@
 use bench::main;
 use bench_binius::{
-    hash::{BiniusGroestl, BiniusKeccak},
+    hash::{BiniusKeccak, BiniusVision},
     setup_trace,
 };
 
 main!(
     setup_trace = setup_trace;
     hash = {
-        Groestl => BiniusGroestl,
+        Vision => BiniusVision,
         Keccak => BiniusKeccak,
     };
 );

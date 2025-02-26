@@ -49,7 +49,7 @@ impl HashInSnark for BiniusKeccak {
         let allocator = bumpalo::Bump::new();
         let mut builder = ConstraintSystemBuilder::new_with_witness(&allocator);
         let log_size = self.num_permutations.ilog2() as usize;
-        binius_circuits::keccakf::keccakf(&mut builder, Some(vec![]), log_size).unwrap();
+        binius_circuits::keccakf::keccakf(&mut builder, &Some(vec![]), log_size).unwrap();
         let witness = builder.take_witness().unwrap();
         let constraint_system = builder.build().unwrap();
         constraint_system::prove::<
@@ -64,6 +64,7 @@ impl HashInSnark for BiniusKeccak {
             &constraint_system,
             self.log_inv_rate,
             self.security_bits,
+            &[],
             witness,
             &DefaultEvaluationDomainFactory::default(),
             &make_portable_backend(),
@@ -72,9 +73,9 @@ impl HashInSnark for BiniusKeccak {
     }
 
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
-        let mut builder = ConstraintSystemBuilder::<U, _>::new();
+        let mut builder = ConstraintSystemBuilder::new();
         let log_size = self.num_permutations.ilog2() as usize;
-        binius_circuits::keccakf::keccakf(&mut builder, None::<[_; 0]>, log_size).unwrap();
+        binius_circuits::keccakf::keccakf(&mut builder, &None::<[_; 0]>, log_size).unwrap();
         let constraint_system = builder.build().unwrap();
         constraint_system::verify::<
             U,
@@ -86,17 +87,17 @@ impl HashInSnark for BiniusKeccak {
             &constraint_system.no_base_constraints(),
             self.log_inv_rate,
             self.security_bits,
-            vec![],
+            &[],
             proof.clone(),
         )
     }
 
     fn serialize_proof(proof: &Self::Proof) -> Vec<u8> {
-        bincode::serialize(&(&proof.transcript, &proof.advice)).unwrap()
+        bincode::serialize(&proof.transcript).unwrap()
     }
 
     fn deserialize_proof(data: &[u8]) -> Self::Proof {
-        let (transcript, advice) = bincode::deserialize(data).unwrap();
-        Proof { transcript, advice }
+        let transcript = bincode::deserialize(data).unwrap();
+        Proof { transcript }
     }
 }

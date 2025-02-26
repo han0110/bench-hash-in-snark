@@ -1,5 +1,5 @@
-mod groestl;
 mod keccak;
+mod vision;
 
-pub use groestl::BiniusGroestl;
 pub use keccak::BiniusKeccak;
+pub use vision::BiniusVision;
