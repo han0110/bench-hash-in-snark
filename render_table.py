@@ -1,7 +1,7 @@
 import sys
 
 package_hashes = [
-    ("binius", ["groestl", "keccak"]),
+    ("binius", ["keccak", "vision"]),
     ("expander", ["keccak", "poseidon"]),
     ("hashcaster", ["keccak"]),
     ("plonky3", ["blake3", "keccak", "poseidon2"]),
