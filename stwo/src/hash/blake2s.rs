@@ -53,7 +53,6 @@ impl HashInSnark for StwoBlake2s {
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
         verify_blake::<Blake2sMerkleChannel>(
             bincode::deserialize(&bincode::serialize(proof).unwrap()).unwrap(),
-            self.config,
         )
     }
 

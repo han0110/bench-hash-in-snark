@@ -61,13 +61,13 @@ impl HashInSnark for StwoPoseidon2 {
         // TODO: Move preprocessing out of prove.
         let (component, proof) = prove_poseidon(self.num_permutations.ilog2(), self.config);
         (
-            component.total_sum,
+            component.claimed_sum,
             component.trace_log_degree_bounds(),
             proof,
         )
     }
 
-    fn verify(&self, (total_sum, sizes, proof): &Self::Proof) -> Result<(), Self::Error> {
+    fn verify(&self, (claimed_sum, sizes, proof): &Self::Proof) -> Result<(), Self::Error> {
         let mut channel = Blake2sChannel::default();
         let mut commitment_scheme =
             CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(self.config);
@@ -85,9 +85,9 @@ impl HashInSnark for StwoPoseidon2 {
             PoseidonEval {
                 log_n_rows: (self.num_permutations >> N_LOG_INSTANCES_PER_ROW).ilog2(),
                 lookup_elements,
-                total_sum: *total_sum,
+                claimed_sum: *claimed_sum,
             },
-            (*total_sum, None),
+            *claimed_sum,
         );
 
         let proof = bincode::deserialize(&bincode::serialize(proof).unwrap()).unwrap();
