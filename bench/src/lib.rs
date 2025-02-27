@@ -52,9 +52,9 @@ fn routine<H: HashInSnark>(snark: &H, mut rng: impl RngCore) -> (Duration, usize
 }
 
 fn warm_up<H: HashInSnark>(snark: &H, mut rng: impl RngCore) {
-    let mut total_elapsed = Duration::default();
-    while total_elapsed.as_secs_f64() < 3.0 {
-        total_elapsed += routine(snark, &mut rng).0;
+    let start = Instant::now();
+    while Instant::now().duration_since(start).as_secs_f64() < 3.0 {
+        routine(snark, &mut rng);
     }
 }
 
