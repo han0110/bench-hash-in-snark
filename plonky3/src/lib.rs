@@ -1,9 +1,9 @@
 use crate::{circuit::Plonky3Circuit, config::Plonky3Config};
-use bench::{util::pcs_log_inv_rate, HashInSnark};
-use p3_uni_stark::{prove, verify, PcsError, Proof, VerificationError};
+use bench::{HashInSnark, util::pcs_log_inv_rate};
+use p3_uni_stark::{PcsError, Proof, VerificationError, prove, verify};
 use rand::RngCore;
-use tracing_forest::{util::LevelFilter, ForestLayer};
-use tracing_subscriber::{prelude::*, EnvFilter, Registry};
+use tracing_forest::{ForestLayer, util::LevelFilter};
+use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
 pub mod circuit;
 pub mod config;
@@ -41,23 +41,19 @@ where
     }
 
     fn prove(&self, input: Self::Input) -> Self::Proof {
-        let mut challenger = self.config.challenger();
         let trace = self.circuit.generate_trace(input);
         prove(
             self.config.stark_config(),
             self.circuit.air(),
-            &mut challenger,
             trace,
             &vec![],
         )
     }
 
     fn verify(&self, proof: &Self::Proof) -> Result<(), Self::Error> {
-        let mut challenger = self.config.challenger();
         verify(
             self.config.stark_config(),
             self.circuit.air(),
-            &mut challenger,
             proof,
             &vec![],
         )

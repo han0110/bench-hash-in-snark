@@ -1,5 +1,5 @@
 use crate::Plonky3Circuit;
-use p3_blake3_air::{generate_trace_rows, Blake3Air};
+use p3_blake3_air::{Blake3Air, generate_trace_rows};
 use p3_field::PrimeField64;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_uni_stark::{StarkGenericConfig, Val};
@@ -42,7 +42,7 @@ where
     }
 
     fn generate_input(&self, mut rng: impl RngCore) -> Self::Input {
-        (0..self.num_permutations).map(|_| rng.gen()).collect()
+        (0..self.num_permutations).map(|_| rng.random()).collect()
     }
 
     fn generate_trace(&self, input: Self::Input) -> RowMajorMatrix<Val<SC>> {

@@ -18,6 +18,4 @@ pub trait Plonky3Config {
         Self: Sized;
 
     fn stark_config(&self) -> &Self::StarkGenericConfig;
-
-    fn challenger(&self) -> <Self::StarkGenericConfig as StarkGenericConfig>::Challenger;
 }

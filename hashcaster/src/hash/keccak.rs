@@ -27,7 +27,7 @@ use hashcaster::{
 use itertools::{chain, Itertools};
 use num_traits::{One, Zero};
 use p3_challenger::{CanObserve, CanSample};
-use rand::RngCore;
+use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
@@ -90,7 +90,11 @@ impl HashInSnark for HashcasterKeccak {
 
     fn generate_input(&self, mut rng: impl RngCore) -> Self::Input {
         let num_vars = self.num_vars();
-        from_fn(|_| (0..1 << num_vars).map(|_| F128::rand(&mut rng)).collect())
+        from_fn(|_| {
+            (0..1 << num_vars)
+                .map(|_| F128::from_raw(rng.random()))
+                .collect()
+        })
     }
 
     fn prove(&self, input: Self::Input) -> Self::Proof {

@@ -1,14 +1,12 @@
 use bench::{util::pcs_log_inv_rate, HashInSnark};
 use rand::RngCore;
-use stwo_prover::{
-    core::{
-        fri::FriConfig,
-        pcs::PcsConfig,
-        prover::VerificationError,
-        vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
-    },
-    examples::blake::{prove_blake, verify_blake, BlakeProof},
+use stwo::core::{
+    fri::FriConfig,
+    pcs::PcsConfig,
+    vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
+    verifier::VerificationError,
 };
+use stwo_examples::blake::{prove_blake, verify_blake, BlakeProof};
 
 pub struct StwoBlake2s {
     num_permutations: usize,

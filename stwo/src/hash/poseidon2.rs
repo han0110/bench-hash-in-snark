@@ -1,19 +1,18 @@
 use bench::{util::pcs_log_inv_rate, HashInSnark};
 use rand::RngCore;
-use stwo_prover::{
-    constraint_framework::TraceLocationAllocator,
-    core::{
-        air::Component,
-        channel::Blake2sChannel,
-        fields::qm31::QM31,
-        fri::FriConfig,
-        pcs::{CommitmentSchemeVerifier, PcsConfig, TreeVec},
-        prover::{verify, StarkProof, VerificationError},
-        vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
-        ColumnVec,
-    },
-    examples::poseidon::{prove_poseidon, PoseidonComponent, PoseidonElements, PoseidonEval},
+use stwo::core::{
+    air::Component,
+    channel::Blake2sChannel,
+    fields::qm31::QM31,
+    fri::FriConfig,
+    pcs::{CommitmentSchemeVerifier, PcsConfig, TreeVec},
+    proof::StarkProof,
+    vcs::blake2_merkle::{Blake2sMerkleChannel, Blake2sMerkleHasher},
+    verifier::{verify, VerificationError},
+    ColumnVec,
 };
+use stwo_constraint_framework::TraceLocationAllocator;
+use stwo_examples::poseidon::{prove_poseidon, PoseidonComponent, PoseidonElements, PoseidonEval};
 
 const N_LOG_INSTANCES_PER_ROW: usize = 3;
 

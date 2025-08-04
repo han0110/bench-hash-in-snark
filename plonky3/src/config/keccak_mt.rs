@@ -3,14 +3,14 @@ use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{ExtensionField, PrimeField32, TwoAdicField};
-use p3_fri::{FriConfig, TwoAdicFriPcs};
+use p3_fri::{FriParameters, TwoAdicFriPcs};
 use p3_keccak::{Keccak256Hash, KeccakF, VECTOR_LEN};
 use p3_merkle_tree::MerkleTreeMmcs;
-use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
-use p3_uni_stark::{StarkConfig, StarkGenericConfig};
+use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher};
+use p3_uni_stark::StarkConfig;
 
 pub type U64Hash = PaddingFreeSponge<KeccakF, 25, 17, 4>;
-pub type FieldHash = SerializingHasher32To64<U64Hash>;
+pub type FieldHash = SerializingHasher<U64Hash>;
 pub type Compress = CompressionFunctionFromHasher<U64Hash, 2, 4>;
 pub type ValMmcs<F> = MerkleTreeMmcs<[F; VECTOR_LEN], [u64; VECTOR_LEN], FieldHash, Compress, 4>;
 pub type ChallengeMmcs<F, E> = ExtensionMmcs<F, E, ValMmcs<F>>;
@@ -41,7 +41,7 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
         let dft = Dft::default();
         // TODO: Calculate precise minimum #queries to reach 128-bits provable security.
         let num_queries = usize::div_ceil(256, log_blowup);
-        let fri_config = FriConfig {
+        let fri_config = FriParameters {
             log_blowup,
             log_final_poly_len: trace_height.ilog2().saturating_sub(1).min(3) as _,
             num_queries,
@@ -49,13 +49,10 @@ impl<Val: TwoAdicField + PrimeField32, Challenge: TwoAdicField + ExtensionField<
             mmcs: challenge_mmcs,
         };
         let pcs = Pcs::new(dft, val_mmcs, fri_config);
-        let stark_config = StarkConfig::new(pcs);
-        Self { stark_config }
-    }
-
-    fn challenger(&self) -> <Self::StarkGenericConfig as StarkGenericConfig>::Challenger {
         let byte_hash = ByteHash {};
-        Challenger::from_hasher(vec![], byte_hash)
+        let challenger = Challenger::from_hasher(vec![], byte_hash);
+        let stark_config = StarkConfig::new(pcs, challenger);
+        Self { stark_config }
     }
 
     fn stark_config(&self) -> &Self::StarkGenericConfig {

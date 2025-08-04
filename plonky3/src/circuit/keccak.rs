@@ -1,6 +1,6 @@
 use crate::Plonky3Circuit;
 use p3_field::PrimeField64;
-use p3_keccak_air::{generate_trace_rows, KeccakAir};
+use p3_keccak_air::{KeccakAir, generate_trace_rows};
 use p3_matrix::dense::RowMajorMatrix;
 use p3_uni_stark::{StarkGenericConfig, Val};
 use rand::{Rng, RngCore};
@@ -43,7 +43,7 @@ where
 
     fn generate_input(&self, mut rng: impl RngCore) -> Self::Input {
         (0..Plonky3Circuit::<SC>::num_permutations(self))
-            .map(|_| rng.gen())
+            .map(|_| rng.random())
             .collect()
     }
 

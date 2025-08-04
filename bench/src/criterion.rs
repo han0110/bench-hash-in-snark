@@ -8,7 +8,7 @@ pub fn bench<H: HashInSnark>(
     name: impl AsRef<str>,
     num_permutations: impl IntoIterator<Item = usize>,
 ) {
-    let mut rng = StdRng::from_entropy();
+    let mut rng = StdRng::from_os_rng();
     for num_permutations in num_permutations {
         let snark = H::new(num_permutations);
         let id = BenchmarkId::new(

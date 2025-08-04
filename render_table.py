@@ -1,7 +1,7 @@
 import sys
 
 package_hashes = [
-    ("binius", ["keccak", "vision"]),
+    ("binius", ["groestl", "keccak"]),
     ("expander", ["keccak", "poseidon"]),
     ("hashcaster", ["keccak"]),
     ("plonky3", ["blake3", "keccak", "poseidon2"]),
@@ -11,7 +11,7 @@ package_hashes = [
 try:
     num_threads = sys.argv[1]
 except Exception:
-    num_threads = "4"
+    num_threads = "24"
 
 print("")
 for package, hashes in package_hashes:

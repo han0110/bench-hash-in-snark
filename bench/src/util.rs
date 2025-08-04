@@ -14,7 +14,7 @@ pub fn po2(exps: impl IntoIterator<Item = usize>) -> impl Iterator<Item = usize>
 pub fn human_time(time: Duration) -> String {
     let time = time.as_nanos();
     if time < 1_000 {
-        format!("{} ns", time)
+        format!("{time} ns")
     } else if time < 1_000_000 {
         format!("{:.2} µs", time as f64 / 1_000.0)
     } else if time < 1_000_000_000 {

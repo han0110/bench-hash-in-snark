@@ -27,7 +27,7 @@ pub trait HashInSnark {
     fn deserialize_proof(bytes: &[u8]) -> Self::Proof;
 
     fn proof_size(&self) -> usize {
-        let mut rng = StdRng::from_entropy();
+        let mut rng = StdRng::from_os_rng();
         let input = self.generate_input(&mut rng);
         let proof = self.prove(input);
         self.verify(&proof).unwrap();
@@ -60,14 +60,14 @@ fn warm_up<H: HashInSnark>(snark: &H, mut rng: impl RngCore) {
 
 pub fn run<H: HashInSnark>(num_permutations: usize) {
     let snark = H::new(num_permutations);
-    let input = black_box(snark.generate_input(StdRng::from_entropy()));
+    let input = black_box(snark.generate_input(StdRng::from_os_rng()));
     let proof = snark.prove(input);
     drop(black_box(proof));
 }
 
 pub fn test<H: HashInSnark>(num_permutations: usize) -> Result<(), H::Error> {
     let snark = H::new(num_permutations);
-    let input = snark.generate_input(StdRng::from_entropy());
+    let input = snark.generate_input(StdRng::from_os_rng());
     let proof = snark.prove(input);
     snark.verify(&proof)?;
     let bytes = H::serialize_proof(&proof);
@@ -80,7 +80,7 @@ pub fn bench<H: HashInSnark>(
     num_permutations: usize,
     sample_size: usize,
 ) -> (usize, Duration, f64, f64) {
-    let mut rng = StdRng::from_entropy();
+    let mut rng = StdRng::from_os_rng();
     let snark = H::new(num_permutations);
 
     warm_up(&snark, &mut rng);

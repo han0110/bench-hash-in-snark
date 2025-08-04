@@ -1,4 +1,4 @@
-// Copied and modified from https://github.com/IrreducibleOSS/binius/blob/main/examples/keccak.rs.
+// Copied and modified from https://github.com/IrreducibleOSS/binius/blob/main/examples/groestl.rs.
 
 use anyhow::{Error, Result};
 use bench::{util::pcs_log_inv_rate, HashInSnark};
@@ -10,68 +10,66 @@ use binius_core::{
 use binius_fast_compute::layer::FastCpuLayerHolder;
 use binius_field::{
     arch::OptimalUnderlier, as_packed_field::PackedType,
-    linear_transformation::PackedTransformationFactory, tower::CanonicalTowerFamily,
+    linear_transformation::PackedTransformationFactory, tower::CanonicalTowerFamily, Field,
     PackedExtension, PackedFieldIndexable, PackedSubfield,
 };
 use binius_hal::make_portable_backend;
 use binius_hash::groestl::{Groestl256, Groestl256ByteCompression, Groestl256Parallel};
 use binius_m3::{
     builder::{
-        ConstraintSystem, TableFiller, TableId, TableWitnessSegment, WitnessIndex, B1, B128, B64,
-        B8,
+        ConstraintSystem, TableFiller, TableId, TableWitnessSegment, WitnessIndex, B1, B128, B8,
     },
-    gadgets::hash::keccak::{stacked::Keccakf, StateMatrix},
+    gadgets::hash::groestl,
 };
 use binius_utils::checked_arithmetics::log2_ceil_usize;
-use core::iter::repeat_with;
+use core::{array, iter::repeat_with};
 use rand::RngCore;
 
+#[derive(Debug)]
 pub struct PermutationTable {
     table_id: TableId,
-    keccakf: Keccakf,
+    permutation: groestl::Permutation,
 }
 
 impl PermutationTable {
-    pub fn new(cs: &mut ConstraintSystem) -> Self {
-        let mut table = cs.add_table("Keccak permutation");
+    pub fn new(cs: &mut ConstraintSystem, pq: groestl::PermutationVariant) -> Self {
+        let mut table = cs.add_table(format!("Grøstl {pq} permutation"));
 
-        let keccakf = Keccakf::new(&mut table);
+        let state_in_bytes = table.add_committed_multiple::<B8, 8, 8>("state_in_bytes");
+        let permutation = groestl::Permutation::new(&mut table, pq, state_in_bytes);
 
         Self {
             table_id: table.id(),
-            keccakf,
+            permutation,
         }
     }
 }
 
 impl<P> TableFiller<P> for PermutationTable
 where
-    P: PackedFieldIndexable<Scalar = B128>
-        + PackedExtension<B1>
-        + PackedExtension<B8>
-        + PackedExtension<B64>,
+    P: PackedFieldIndexable<Scalar = B128> + PackedExtension<B1> + PackedExtension<B8>,
     PackedSubfield<P, B8>: PackedTransformationFactory<PackedSubfield<P, B8>>,
 {
-    type Event = StateMatrix<u64>;
+    type Event = [B8; 64];
 
     fn id(&self) -> TableId {
         self.table_id
     }
 
     fn fill(&self, rows: &[Self::Event], witness: &mut TableWitnessSegment<P>) -> Result<()> {
-        self.keccakf.populate_state_in(witness, rows)?;
-        self.keccakf.populate(witness)?;
+        self.permutation.populate_state_in(witness, rows.iter())?;
+        self.permutation.populate(witness)?;
         Ok(())
     }
 }
 
-pub struct BiniusKeccak {
+pub struct BiniusGroestl {
     num_permutations: usize,
     log_inv_rate: usize,
     security_bits: usize,
 }
 
-impl HashInSnark for BiniusKeccak {
+impl HashInSnark for BiniusGroestl {
     type Input = ();
     type Proof = Proof;
     type Error = Error;
@@ -96,18 +94,18 @@ impl HashInSnark for BiniusKeccak {
 
     fn prove(&self, _: Self::Input) -> Self::Proof {
         let mut allocator = CpuComputeAllocator::new(
-            1 << (11 + log2_ceil_usize(self.num_permutations)
+            1 << (8 + log2_ceil_usize(self.num_permutations)
                 - PackedType::<OptimalUnderlier, B128>::LOG_WIDTH),
         );
         let allocator = allocator.into_bump_allocator();
         let mut cs = ConstraintSystem::new();
-        let table = PermutationTable::new(&mut cs);
+        let table = PermutationTable::new(&mut cs, groestl::PermutationVariant::P);
 
         let boundaries = vec![];
         let table_sizes = vec![self.num_permutations];
 
         let mut rng = rand::rng();
-        let events = repeat_with(|| StateMatrix::from_fn(|_| rng.next_u64()))
+        let events = repeat_with(|| array::from_fn::<_, 64, _>(|_| B8::random(&mut rng)))
             .take(self.num_permutations)
             .collect::<Vec<_>>();
 

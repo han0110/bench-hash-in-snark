@@ -2,9 +2,9 @@ use crate::Plonky3Circuit;
 use p3_commit::PolynomialSpace;
 use p3_koala_bear::{GenericPoseidon2LinearLayersKoalaBear, KoalaBear};
 use p3_matrix::dense::RowMajorMatrix;
-use p3_poseidon2_air::{generate_vectorized_trace_rows, RoundConstants, VectorizedPoseidon2Air};
+use p3_poseidon2_air::{RoundConstants, VectorizedPoseidon2Air, generate_vectorized_trace_rows};
 use p3_uni_stark::{Domain, StarkGenericConfig, Val};
-use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
+use rand::{Rng, RngCore, SeedableRng, rngs::StdRng};
 
 // Copied from https://github.com/Plonky3/Plonky3/blob/abdc2a0/poseidon2-air/examples/prove_poseidon2_koala_bear_keccak.rs#L26-L34.
 const WIDTH: usize = 16;
@@ -43,7 +43,7 @@ where
     where
         Self: Sized,
     {
-        let rng = StdRng::from_entropy();
+        let rng = StdRng::from_os_rng();
         let constants = RoundConstants::from_rng(&mut rng.clone());
         let air = VectorizedPoseidon2Air::new(RoundConstants::from_rng(&mut rng.clone()));
         Self {
@@ -68,7 +68,7 @@ where
 
     fn generate_input(&self, mut rng: impl RngCore) -> Self::Input {
         (0..Plonky3Circuit::<SC>::num_permutations(self))
-            .map(|_| rng.gen())
+            .map(|_| rng.random())
             .collect()
     }
 

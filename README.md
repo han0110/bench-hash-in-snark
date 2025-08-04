@@ -8,7 +8,7 @@ RAYON_NUM_THREADS=<num_threads> ./bench.sh <package> <hash> <log_permutations>
 
 Available `package` and `hash`:
 
-- `binius` - `keccak`, `vision`
+- `binius` - `groestl`, `keccak`
 - `expander` - `keccak`, `poseidon`
 - `hashcaster` - `keccak`
 - `plonky3` - `keccak`, `blake3`, `poseidon2`
