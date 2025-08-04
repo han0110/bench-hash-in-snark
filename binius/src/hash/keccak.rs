@@ -118,10 +118,11 @@ impl HashInSnark for BiniusKeccak {
         let cs_digest = ccs.digest::<Groestl256>();
         let witness = witness.into_multilinear_extension_index();
 
-        let mut compute_holder = FastCpuLayerHolder::<
-            CanonicalTowerFamily,
-            PackedType<OptimalUnderlier, B128>,
-        >::new(1 << 20, 1 << 28);
+        let mut compute_holder =
+            FastCpuLayerHolder::<CanonicalTowerFamily, PackedType<OptimalUnderlier, B128>>::new(
+                1 << 20,
+                1 << (13 + log2_ceil_usize(self.num_permutations)),
+            );
 
         let proof = constraint_system::prove::<
             _,
